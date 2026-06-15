@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final LeaderboardService leaderboardService;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     // private final PasswordEncoder passwordEncoder;
@@ -65,6 +66,8 @@ public class UserService implements UserDetailsService {
     @Transactional
     public void updateUserScoreInfo(String username, int scoreChange){
         userRepository.updateScoreByUsername(username, scoreChange > 0 ? 1 : 0, scoreChange);
+        // 同步更新 Redis 排行榜（ZINCRBY）；失败时已在内部降级，不影响积分入库
+        leaderboardService.addScore(username, scoreChange);
     }
 
     /**

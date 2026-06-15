@@ -5,10 +5,12 @@
 ![WebSocket](https://img.shields.io/badge/WebSocket-STOMP%20%2F%20SockJS-010101?logo=socketdotio&logoColor=white)
 ![Spring Security](https://img.shields.io/badge/Spring%20Security-BCrypt-6DB33F?logo=springsecurity&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-Druid-4479A1?logo=mysql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Leaderboard-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Maven](https://img.shields.io/badge/Build-Maven-C71A36?logo=apachemaven&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-一款基于 **Spring Boot + WebSocket(STOMP/SockJS)** 实现的 **5 人实时对战网页纸牌游戏**。从用户认证、游戏大厅、房间管理到实时对局与积分结算，完整覆盖一局多人在线棋牌游戏的全流程。后端采用清晰的分层架构，前端使用原生 JavaScript 实现实时交互，并支持断线重连。
+一款基于 **Spring Boot + WebSocket(STOMP/SockJS)** 实现的 **5 人实时对战网页纸牌游戏**。从用户认证、游戏大厅、房间管理到实时对局与积分结算，完整覆盖一局多人在线棋牌游戏的全流程。后端采用清晰的分层架构，引入 Redis 实现积分排行榜，并提供 Docker Compose 一键启动开发环境；前端使用原生 JavaScript 实现实时交互，并支持断线重连。
 
 > 个人全栈练手项目，用于学习与作品展示。
 
@@ -21,6 +23,7 @@
 - 🏛️ **游戏大厅**：实时房间列表、创建房间（支持公开 / 密码房，密码经 SHA-256 处理）、加入房间。
 - 🪑 **房间管理**：座位分配、准备 / 取消准备、玩家加入 / 离开广播、房主开局。
 - 🎮 **实时对局**：发牌、出牌、过牌（PASS）、轮转出牌、自动分队、对局结算，全程基于 WebSocket 实时同步。
+- 🏆 **积分排行榜**：基于 **Redis ZSet** 的实时排行榜，支持 TopN 榜单与「我的排名」查询，结算后通过 `ZINCRBY` 增量更新。
 - 💬 **房间内聊天**：自由聊天 + 预设快捷语。
 - 🔌 **断线重连**：刷新 / 掉线后可恢复完整对局上下文（手牌、当前轮次、上手牌、阵营等）。
 - 🔊 **音效与响应式 UI**：出牌 / 过牌 / 开局等音效，适配不同屏幕尺寸。
@@ -36,6 +39,8 @@
 | **实时通信** | Spring WebSocket、STOMP、SockJS |
 | **安全认证** | Spring Security、BCrypt |
 | **持久层** | Spring Data JPA / Hibernate、MySQL、Druid 连接池 |
+| **缓存 / 排行榜** | Redis（Spring Data Redis、Lettuce、ZSet） |
+| **容器化** | Docker、Docker Compose（一键拉起 MySQL / Redis / RabbitMQ） |
 | **模板引擎** | Thymeleaf |
 | **日志** | Log4j2 |
 | **工具** | Lombok、Maven |
@@ -49,13 +54,13 @@
 
 ```text
 martin.game
-├── config/         # 配置：Security / WebMvc / WebSocket(STOMP)
-├── controller/     # 控制器：Auth / Hall / Room / Game(WebSocket) / User
-├── dto/            # 数据传输对象
+├── config/         # 配置：Security / WebMvc / WebSocket(STOMP) / Redis
+├── controller/     # 控制器：Auth / Hall / Room / Game(WebSocket) / User / Leaderboard
+├── dto/            # 数据传输对象：UserInfo / LeaderboardEntry
 ├── interceptor/    # 拦截器：基础拦截、WebSocket 握手用户同步
 ├── model/          # 领域模型：Card / Room / User / GameRound / GameState / SeatType ...
 ├── repository/     # 数据访问：UserRepository (Spring Data JPA)
-├── service/        # 业务逻辑：Game / Room / Hall / User
+├── service/        # 业务逻辑：Game / Room / Hall / User / Leaderboard(Redis ZSet)
 ├── utils/          # 工具类：GameUtils(牌型规则) / SHA256Utils / LoginUser
 ├── websocket/      # 房间消息处理器
 └── GameApplication.java
@@ -97,71 +102,61 @@ sequenceDiagram
 ### 环境要求
 
 - JDK 17+
-- Maven 3.6+（或直接使用项目自带的 `mvnw` / `mvnw.cmd`）
-- MySQL 5.7+ / 8.0+
+- MySQL 5.7+ / 8.0+、Redis 6+（推荐用下方 Docker Compose 一键拉起）
+- Maven（可直接使用项目自带的 `mvnw` / `mvnw.cmd`）
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/Martin8311/poker.git
+cd poker
 ```
 
-### 2. 初始化数据库
+### 2. 启动依赖中间件（二选一）
 
-创建数据库与用户表（JPA 默认不自动建表）：
+**方式一：Docker Compose 一键启动（推荐）** —— 自动拉起 MySQL（含自动建表）、Redis、RabbitMQ：
 
-```sql
-CREATE DATABASE IF NOT EXISTS poker DEFAULT CHARACTER SET utf8mb4;
-
-USE poker;
-
-CREATE TABLE IF NOT EXISTS `user` (
-  `id`          INT AUTO_INCREMENT PRIMARY KEY,
-  `username`    VARCHAR(45)  NOT NULL UNIQUE,
-  `password`    VARCHAR(200) NOT NULL,
-  `nickname`    VARCHAR(45)  NOT NULL,
-  `email`       VARCHAR(45)  DEFAULT NULL,
-  `create_time` DATETIME     DEFAULT NULL,
-  `total_games` INT          DEFAULT 0,
-  `win_games`   INT          DEFAULT 0,
-  `score`       INT          DEFAULT 0,
-  `iconUrl`     VARCHAR(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```bash
+cp .env.example .env      # 按需修改密码
+docker compose up -d
 ```
 
-### 3. 配置 `application.properties`
+**方式二：使用本地已有的 MySQL / Redis** —— 自行启动服务，并在 MySQL 中执行 `docker/mysql/init.sql` 完成建库建表。
 
-编辑 `src/main/resources/application.properties`，填入你的数据库连接与头像存储路径：
+### 3. 配置连接信息（环境变量）
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/poker?useSSL=false&serverTimezone=GMT%2B8&characterEncoding=utf8
-spring.datasource.username=your_db_username
-spring.datasource.password=your_db_password
+应用通过环境变量读取敏感配置（见 `application.properties`），在 IDE 运行配置或 shell 中设置：
 
-# 头像文件存储路径（改为你本机 / 服务器上的真实目录）
-avatar.upload.path=D:/poker/icon
-```
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `DB_USERNAME` | 数据库用户名 | `root` |
+| `DB_PASSWORD` | 数据库密码 | （必填） |
+| `REDIS_HOST` / `REDIS_PORT` | Redis 地址 / 端口 | `localhost` / `6379` |
 
-> 🔒 **安全提示**：请勿把**真实数据库密码**提交到版本库。推荐通过**环境变量**注入敏感信息，例如：
-> ```properties
-> spring.datasource.password=${DB_PASSWORD}
-> ```
-> 运行前在环境中设置 `DB_PASSWORD`，即可避免明文密码进入 Git。
+> 🔒 仓库内不含任何明文密码；本地用 `.env`（已被 `.gitignore` 忽略）或 IDE 环境变量注入。
 
 ### 4. 构建并运行
 
 ```bash
 # Windows
 mvnw.cmd spring-boot:run
-
 # Linux / macOS
 ./mvnw spring-boot:run
 ```
 
-启动后访问：**http://localhost:8080**
+启动后访问 **http://localhost:8080**。
 
-> 提示：完整对局需要 **5 名玩家**。可在多个浏览器 / 无痕窗口分别注册账号加入同一房间进行体验。
+> 提示：完整对局需要 **5 名玩家**，可用多个浏览器 / 无痕窗口分别注册账号加入同一房间体验。
+
+---
+
+## 📊 排行榜接口
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/leaderboard/top?n=10` | 积分榜前 N 名 |
+| `GET` | `/leaderboard/me` | 当前登录用户的排名与积分 |
+| `POST` | `/leaderboard/rebuild` | 从数据库重建排行榜（数据修复 / 调试） |
 
 ---
 
@@ -170,6 +165,7 @@ mvnw.cmd spring-boot:run
 - **实时通信**：基于 `@EnableWebSocketMessageBroker` 搭建 STOMP/SockJS 通道，以 `/topic/rooms/{roomId}` 做**房间级发布-订阅**，实现发牌、出牌、过牌、聊天、状态同步的低延迟广播；SockJS 提供不支持原生 WebSocket 环境下的自动降级。
 - **游戏规则引擎**：从零实现牌组生成与洗牌发牌、出牌合法性校验（牌型 / 张数 / 压牌大小）、基于座位的循环轮转出牌、隐藏阵营自动划分，以及按出完顺序与阵营计算的多分支结算算法。
 - **并发控制**：使用 `ConcurrentHashMap` 管理房间，结合**每房间独立 `ReentrantLock`（`tryLock` 超时）**与 `ReentrantReadWriteLock` 保护玩家状态，规避多人并发操作下的竞态与数据不一致。
+- **Redis 排行榜**：用 **ZSet** 维护积分榜，结算时 `ZINCRBY` 增量更新（O(log N)），`ZREVRANGE` 取 TopN、`ZREVRANK` 查个人排名；Redis 仅作读加速，写入失败时**降级**不阻断主流程，并在**应用启动时从 DB 预热重建**，保证与持久层最终一致。
 - **断线重连**：通过独立的 recover 接口，在刷新 / 掉线后还原玩家手牌、当前轮次、上手牌与阵营等完整对局上下文，保障对局连续性。
 - **安全与认证**：集成 Spring Security 完成注册登录与会话管理（BCrypt 加密），并自定义 **WebSocket 握手拦截器**将 HTTP 会话身份同步至长连接；采用「广播发牌通知 + 玩家各自拉取手牌」的方式降低手牌泄露风险。
 - **数据持久化**：基于 Spring Data JPA + 自定义 `@Modifying` 更新语句持久化用户战绩，支持头像上传与裁剪。
@@ -178,10 +174,10 @@ mvnw.cmd spring-boot:run
 
 ## 🗺️ 后续优化方向
 
-- [ ] 将房间 / 对局状态外置到 **Redis**，并接入外部消息代理（RabbitMQ / ActiveMQ），支持多实例**水平扩展**。
+- [x] **Redis ZSet 排行榜** + Docker Compose 一键开发环境。
+- [ ] 接入 **RabbitMQ 作为 STOMP Broker Relay**，替换内存版 SimpleBroker，并将房间 / 对局状态外置到 Redis，支持多实例**水平扩展**。
 - [ ] 增加 **消息级鉴权**（`messageMatchers`）与接口层统一身份校验，收敛 WebSocket `allowedOrigin` 白名单。
-- [ ] 将敏感配置全面迁移至环境变量 / 配置中心。
-- [ ] 补充单元测试与集成测试，完善 CI。
+- [ ] 补充单元测试与集成测试，完善 CI/CD。
 - [ ] 增加对局回放、观战与匹配机制。
 
 ---
@@ -197,6 +193,9 @@ game
 │   ├── application.properties    # 应用配置
 │   └── log4j2.xml                # 日志配置
 ├── src/test                      # 测试
+├── docker/                       # MySQL 初始化 SQL、RabbitMQ 插件配置
+├── docker-compose.yml            # 一键拉起 MySQL / Redis / RabbitMQ
+├── .env.example                  # 环境变量样例
 ├── pom.xml                       # Maven 依赖与构建
 └── mvnw / mvnw.cmd               # Maven Wrapper
 ```

@@ -8,10 +8,16 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByUsername(String username);
+
+    // 批量按用户名查询（排行榜补全昵称 / 头像，避免 N 次查询）
+    List<User> findByUsernameIn(Collection<String> usernames);
+
     boolean existsByUsername(String username);
     // boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);

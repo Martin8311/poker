@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: poker-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-poker_root_pwd}
+      MYSQL_DATABASE: poker
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: poker-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: poker-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # 管理控制台 http://localhost:15672
+      - "61613:61613"   # STOMP（供 WebSocket Broker Relay 使用）
+    volumes:
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq-data:/var/lib/rabbitmq
+
+volumes:
+  mysql-data:
+  redis-data:
+  rabbitmq-data:
