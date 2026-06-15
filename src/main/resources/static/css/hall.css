@@ -1,0 +1,286 @@
+.hall-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logout-btn {
+    padding: 5px 15px;
+    background-color: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.room-actions {
+    margin-bottom: 20px;
+}
+
+#createRoomBtn {
+    padding: 8px 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.room-list {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.rooms {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.room-card {
+    background-color: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 2px solid #ffccaa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.join-room-btn {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.current-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 头像样式 */
+.avatar-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #ddd;
+}
+
+.avatar-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* 模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+.modal-content {
+    top:20%;
+    left: 20%;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    z-index: 20; /* 关键：层级高于遮罩层（999），确保表单在最上层 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 模态框遮罩层 */
+/*.modal-overlay {*/
+/*    position: absolute;*/
+/*    top: 0;*/
+/*    left: 0;*/
+/*    width: 100%;*/
+/*    height: 100%;*/
+/*    background-color: rgba(0, 0, 0, 0.5); !* 半透明黑色遮罩 *!*/
+/*    z-index: 10; !* 层级：低于表单弹窗，高于页面背景 *!*/
+/*    backdrop-filter: blur(2px); !* 背景模糊（可选，增强视觉效果） *!*/
+/*}*/
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.form-group .hint {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #666;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+/* 按钮样式 */
+.edit-btn {
+    padding: 5px 10px;
+    font-size: 14px;
+}
+
+.reconnect-modal {
+    animation: fadeIn 0.3s ease;
+}
+
+.reconnect-modal > div {
+    animation: scaleIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.hall-player-icon{
+    width: 50px;
+    height: 50px;
+    /*border-radius: 50%;*/
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+/* 关闭按钮 */
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+/* 模态框主体（表单区域） */
+.modal-body {
+    padding: 20px;
+}
+
+/* 必填项标记 */
+.required {
+    color: #dc3545; /* 红色 */
+}
+
+/* 输入框/文本域样式 */
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff; /* 聚焦时蓝色边框 */
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* 表单提示文本 */
+.form-text {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+

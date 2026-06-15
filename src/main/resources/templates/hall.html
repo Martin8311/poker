@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>游戏大厅</title>
+
+    <!-- 引入CSRF令牌（Spring Security POST请求必需） -->
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+
+    <link rel="stylesheet" th:href="@{/css/hall.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+</head>
+<body>
+
+<div class="hall-container">
+    <header>
+        <h1>纸牌游戏大厅</h1>
+        <div class="user-info">
+            <span>欢迎，<span th:text="${nickname}" id="nickname">玩家</span>！</span>
+
+            <img th:src="${iconUrl}" id="hall-player-icon" class="hall-player-icon" alt="当前头像">
+
+            <!-- 编辑资料按钮 -->
+            <button id="editProfileBtn" class="btn btn-primary edit-btn">
+                <i class="fas fa-user-edit"></i> 编辑资料
+            </button>
+
+            <a href="/logout" class="btn btn-danger logout-btn">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </a>
+        </div>
+    </header>
+
+    <!-- 编辑资料模态框 -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑个人资料</h3>
+            </div>
+            <form id="profileForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="newNickname">昵称：</label>
+                    <input type="text" id="newNickname" name="nickname"
+                           th:value="${nickname}" maxlength="20" required>
+                </div>
+
+                <div class="form-group">
+                    <label>当前头像：</label>
+                    <div class="avatar-preview">
+                        <img th:src="${iconUrl}" alt="当前头像" id="modalCurrentAvatar" class="avatar-img">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="avatarFile">上传新头像：</label>
+                    <input type="file" id="avatarFile" name="avatarFile"
+                           accept="image/jpeg, image/png, image/gif"
+                           onchange="previewAvatar(event)">
+                    <p class="hint">支持JPG、PNG、GIF格式，建议尺寸200x200px</p>
+
+<!--                    &lt;!&ndash; 裁剪区域 &ndash;&gt;-->
+<!--                    <div id="cropperArea" style="display:none;">-->
+<!--                        <img id="cropImage" src="" alt="待裁剪图片">-->
+<!--                    </div>-->
+
+                    <!-- 头像预览 -->
+                    <label>预览头像：</label>
+                    <div class="avatar-preview" id="newAvatarPreview" style="display: none;">
+                        <img src="" alt="预览" class="avatar-img">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. 创建房间模态框（默认隐藏） -->
+    <div id="createRoomModal" class="modal">
+        <!-- 模态框背景遮罩 -->
+        <div class="modal-overlay"></div>
+        <!-- 模态框内容区 -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>创建游戏房间</h3>
+            </div>
+            <div class="modal-body">
+                <!-- 创建房间表单 -->
+                <form id="createRoomForm">
+                    <div class="form-group">
+                        <label for="roomDesc">房间简介 <span class="required">*</span></label>
+                        <textarea
+                                id="roomDesc"
+                                name="roomDesc"
+                                class="form-control"
+                                rows="3"
+                                placeholder="请输入房间信息"
+                                required></textarea>
+                        <small class="form-text text-muted">房间信息最多200字</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="roomPwd">房间密码（可选）</label>
+                        <input
+                                type="password"
+                                id="roomPwd"
+                                name="roomPwd"
+                                class="form-control"
+                                placeholder="不输入则为公开房间"
+                                maxlength="16">
+                        <small class="form-text text-muted">可选，不输入则创建公开房间</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelCreateBtn" class="btn btn-secondary">取消</button>
+                <button id="submitCreateBtn" class="btn btn-primary">确认创建</button>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <!-- 创建房间区域 -->
+        <div class="room-actions">
+            <button id="createRoomBtn" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> 创建新房间
+            </button>
+            <div id="loadingIndicator" style="display: none; margin-left: 15px; color: #666; vertical-align: middle;">
+                <i class="fas fa-spinner fa-spin"></i> 创建中...
+            </div>
+            <div id="errorMsg" style="display: none; margin-left: 15px; color: #dc3545; vertical-align: middle;"></div>
+        </div>
+
+        <div class="room-list">
+            <h2>可加入房间</h2>
+            <div class="rooms" id="roomContainer">
+                <div class="no-rooms" th:if="${rooms.empty}">
+                    暂无可用房间，创建一个新房间开始游戏吧！
+                </div>
+
+                <!-- 房间卡片：移除onclick，添加data-room-id存储房间ID -->
+<!--                <div th:each="room : ${rooms}" class="room-card">-->
+<!--                    <h3>房间 ID: <span th:text="${room.roomId}"></span></h3>-->
+<!--                    <p>创建者: <span th:text="${room.creator.nickname}"></span></p>-->
+<!--                    <p>信息: <span th:text="${room.info}"></span></p>-->
+<!--                    <p>当前人数: <span th:text="${room.players.size()}"></span>/5</p>-->
+<!--                    &lt;!&ndash; 关键：用data-room-id存储roomId，添加统一的class便于JS选择 &ndash;&gt;-->
+<!--                    <button class="btn btn-primary join-room-btn"-->
+<!--                            th:data-room-id="${room.roomId}"> &lt;!&ndash; 动态绑定roomId到属性 &ndash;&gt;-->
+<!--                        <i class="fas fa-door-open"></i> 加入房间-->
+<!--                    </button>-->
+<!--                </div>-->
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:src="@{/js/hall/cropper.js}"></script>
+<script th:src="@{/js/hall/utils.js}"></script>
+<script th:src="@{/js/hall/hallUI.js}"></script>
+<script th:src="@{/js/hall/hall.js}"></script>
+<script th:inline="javascript">
+    const username = [[${username}]];  // 双中括号会自动转义为字符串
+    const iconUrl = [[${iconUrl}]];
+    const nickname = [[${nickname}]];
+</script>
+</body>
+</html>

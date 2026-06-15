@@ -1,0 +1,43 @@
+/* 基础按钮样式 */
+.sound-btn, .music-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* 图标与文字间距 */
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 2px #ffcc00;
+    background-color: #f0f0f0;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease; /* 平滑过渡效果 */
+    font-size: 14px;
+}
+
+/* 按钮悬停效果 */
+.sound-btn:hover, .music-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* 图标样式 */
+.sound-btn i, .music-btn i {
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+/* 关闭状态样式（通过添加 'muted' 类实现） */
+.sound-btn.muted, .music-btn.muted {
+    background-color: #ffebee; /* 关闭时背景色偏浅红 */
+}
+
+.sound-btn.muted i, .music-btn.muted i {
+    color: #dc3545; /* 关闭时图标为红色 */
+}
+
+/* 关闭状态的图标变化（通过类切换图标） */
+.sound-btn.muted i::before {
+    content: "\f026"; /* 静音图标（Font Awesome 的 fa-volume-off） */
+}
+
+.music-btn.muted i::before {
+    content: "\f028"; /* 音乐关闭图标（Font Awesome 的 fa-volume-mute） */
+}

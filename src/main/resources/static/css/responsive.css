@@ -1,0 +1,86 @@
+/* 2. 手机大屏（480px ~ 768px） */
+@media (max-width: 768px) {
+    .card-table {
+        width: 90%;
+        height: 60%;
+    }
+
+    /* 隐藏左上/右上玩家的部分统计数据，保留核心 */
+    .left-top-position .player-stats,
+    .right-top-position .player-stats {
+        display: none;
+    }
+    .player-position {
+        width: 120px;
+        padding: 5px;
+    }
+
+    .player-name {
+        font-size: 12px;
+        color: #ffccaa;
+    }
+    /* 缩小出牌区最大宽度 */
+    .played-cards-container {
+        max-width: 100px;
+    }
+}
+
+@media (max-width: 1200px){
+    .player-name {
+        font-size: 12px;
+        color: #ffccaa;
+    }
+
+    .game-area {
+        position: relative;
+        background-color: #f0f5f0;
+        width: 100%;
+        aspect-ratio: 9/14;
+        min-height: 400px;
+        margin-bottom: 20px;
+        border-radius: 10px;
+        border: 3px solid #faafff;
+    }
+}
+
+/*@media (max-width: 1200px){*/
+/*    #room-container{*/
+/*        !* 设置基准点为左上角 *!*/
+/*        transform-origin:top left;*/
+/*        !* 以左上角为基准点，顺时针旋转90度 然后沿Y轴反方向平移100% *!*/
+/*        !* 为什么沿Y轴，因为旋转使坐标轴方向发生了变化 *!*/
+/*        transform: rotate(90deg) translateY(-100%);*/
+/*        !*设置元素的宽度为 100%父元素的高度 并提高样式优先级 *!*/
+/*        width: 100vh !important;*/
+/*        !*设置元素的宽度为 100%父元素的宽度  并提高样式优先级 *!*/
+/*        height: 100vw !important;*/
+/*    }*/
+/*}*/
+
+/* 3. 手机小屏（< 480px） */
+@media (max-width: 480px) {
+    .room-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    .user-actions {
+        justify-content: center;
+    }
+    .player-position {
+        width: 100px;
+    }
+    .player-status {
+        font-size: 10px;
+    }
+    /* 只显示当前玩家和左右玩家，隐藏左上/右上（空间不足） */
+    .left-top-position,
+    .right-top-position {
+        display: none;
+    }
+    /* 缩小手牌区域按钮 */
+    .action-buttons button {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+}

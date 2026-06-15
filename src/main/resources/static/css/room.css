@@ -1,0 +1,349 @@
+/* 房间页面样式 */
+.room-container {
+    max-width: 1400px;
+    /*max-width: 100%;*/
+    margin: 0 auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.room-info h1 {
+    margin: 0;
+    color: #333;
+}
+
+.user-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* 通用按钮样式 */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    border: 2px #ffcc00;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border: 2px #ffcc00;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border: 2px #ffcc00;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-ready {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* 图标与文字间距 */
+    transition: all 0.2s ease; /* 平滑过渡效果 */
+}
+
+/* 未准备状态（默认） */
+.btn-ready {
+    background-color: #4CAF50; /* 绿色 */
+    border: 2px #ffcc00;
+    color: white;
+}
+
+.btn-ready:hover {
+    background-color: #45a049; /* 深绿色 */
+}
+
+/* 已准备状态（通过添加ready类实现） */
+.btn-ready.ready {
+    background-color: #f44336; /* 红色 */
+}
+
+.btn-ready.ready:hover {
+    background-color: #d32f2f; /* 深红色 */
+}
+
+/* 图标样式调整 */
+.btn-ready i {
+    font-size: 16px;
+}
+
+/* 已准备状态的图标变化 */
+.btn-ready.ready i::before {
+    content: "\f057"; /* 叉号图标（Font Awesome的fa-times-circle） */
+}
+
+/* 大厅页面样式补充 */
+.room-list {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.rooms {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.room-card {
+    background-color: white;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 适配小屏幕：减少偏移量避免溢出 */
+@media (max-width: 768px) {
+    .card {
+        width: 70px;
+        height: 100px;
+    }
+    .card:nth-child(n) {
+        left: calc(20px + (n-1)*25px); /* 减少水平偏移 */
+    }
+}
+
+/* 当前回合玩家高亮 */
+/*.player-position.current-turn {*/
+/*    border: 2px solid #ffcc00;*/
+/*    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);*/
+/*}*/
+
+/* 闪烁动画关键帧 */
+@keyframes blink {
+    0% {
+        border-color: #ff1c00;
+        /*box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);*/
+    }
+    50% {
+        border-color: #ff5c00;
+        /*box-shadow: 0 0 20px rgba(255, 204, 0, 0.8);*/
+    }
+    100% {
+        border-color: #ffcc00;
+        /*box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);*/
+    }
+}
+
+/* 闪烁效果类 */
+.player-position.current-turn {
+    border: 2px solid #ffcc00;
+    animation: blink 1s infinite; /* 1秒为一个周期，无限循环 */
+}
+
+/* 出空 */
+.player-position.hand-empty {
+    border: 5px solid #ff1c00;
+}
+
+/* 操作按钮：居中显示，避免偏移 */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.action-buttons button {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+}
+
+.action-buttons #playBtn {
+    background-color: #4CAF50;
+    border: 2px #ffcc00;
+    color: white;
+}
+
+.action-buttons #passBtn {
+    background-color: #f44336;
+    border: 2px #ffcc00;
+    color: white;
+}
+
+.action-buttons button:hover {
+    opacity: 0.9;
+}
+
+.card.selected {
+    transform: translateY(-10px); /* 选中时向上移动 10px */
+}
+
+
+
+.player-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #e0e0e0;
+}
+
+.player-stats .stat {
+    padding: 2px 5px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 总计分按钮样式 */
+.btn-totalScore {
+    padding: 8px 16px;
+    background-color: #ffccaa;
+    color: white;
+    border: 2px #ffcc00;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+
+.btn-totalScore:hover {
+    background-color: #34495e;
+}
+
+/* 模态框样式 */
+.score-board-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.score-board-modal .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+/* 积分表格样式 */
+.score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.score-table th,
+.score-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.score-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.score-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* 积分变化样式 */
+.change-positive {
+    color: #27ae60;
+    font-weight: 500;
+}
+
+.change-negative {
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+.change-neutral {
+    color: #7f8c8d;
+}
+
+/* 记录列表样式 */
+.change-log {
+    font-size: 13px;
+    color: #555;
+}
+
+.modal-footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    text-align: right;
+}
+
+
+

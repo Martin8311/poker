@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>房间</title>
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <link rel="stylesheet" th:href="@{/css/room.css}">
+    <link rel="stylesheet" th:href="@{/css/timer.css}">
+    <link rel="stylesheet" th:href="@{/css/player-chair.css}">
+<!--    <link rel="stylesheet" th:href="@{/css/flex-container.css}">-->
+    <link rel="stylesheet" th:href="@{/css/player-card-contain.css}">
+    <link rel="stylesheet" th:href="@{/css/chat-contain.css}">
+    <link rel="stylesheet" th:href="@{/css/game-table.css}">
+    <link rel="stylesheet" th:href="@{/css/soundControlButton.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+
+
+</head>
+
+<body>
+<div class="room-container">
+    <!-- 顶部信息栏 -->
+    <header class="room-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="room-info">
+            <h1>房间 <span th:text="${roomId}"></span></h1>
+            <p id="playerCount" th:text="${'当前玩家: ' + players.size() + '/5'}"></p>
+        </div>
+        <div class="user-actions">
+            <!-- 准备 非房主玩家可见-->
+            <button id="readyBtn" th:if="${!isCreator}" class="btn btn-ready">
+                <i class="fas fa-ready"></i> 准备
+            </button>
+
+            <!-- 音效控制按钮 -->
+            <button id="closeSoundBtn" class="sound-btn">
+                <i class="fas fa-volume-up"></i> <!-- 默认显示开启图标 -->
+                <span>音效</span>
+            </button>
+
+            <!-- 背景音乐控制按钮 -->
+            <button id="closeMusicBtn" class="music-btn">
+                <i class="fas fa-music"></i> <!-- 默认显示开启图标 -->
+                <span>音乐</span>
+            </button>
+            <button id="leaveRoomBtn" class="btn btn-danger">
+                <i class="fas fa-sign-out-alt"></i> 离开房间
+            </button>
+            <button id="startGameBtn" th:if="${!gameStarted && isCreator}" class="btn btn-success">
+                <i class="fas fa-play"></i> 开始游戏
+            </button>
+            <button id="startGameRestartBtn" th:if="${!gameStarted && isCreator}" class="btn btn-restart" style="display: none">
+                <i class="fas fa-replay"></i> 再来一局
+            </button>
+
+            <button id="totalScoreBoardBtn" class="btn btn-totalScore">
+                <i class="fas fa-totalScore"></i> 总计分
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-container">
+        <!-- 游戏区域 - 牌桌和玩家位置 -->
+        <div class="game-area">
+            <!-- 牌桌 -->
+            <div class="card-table">
+                <div class="table-center">
+                    <p th:if="${!gameStarted}">马哥工作室</p>
+                    <p th:if="${gameStarted}">马哥工作室</p>
+                </div>
+
+                <!-- 5个玩家出牌展示区域 -->
+                <div class="played-cards-container" data-player="player1-card">
+
+                </div>
+                <div class="played-cards-container" data-player="player2-card">
+
+                </div>
+                <div class="played-cards-container" data-player="player3-card">
+
+                </div>
+                <div class="played-cards-container" data-player="player4-card">
+
+                </div>
+                <div class="played-cards-container" data-player="currentPlayer-card">
+
+                </div>
+            </div>
+
+            <!-- 玩家位置 - 左 -->
+            <div class="player-position left-position" id="player4">
+                <div class="player-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="player-info">
+                    <span class="player-name" id="player4Name">等待玩家</span>
+                    <span class="player-status" id="player4Status">准备中</span>
+                    <div class="player-stats">
+                        <span class="stat score" id="player4Score">积分: --</span>
+                        <span class="stat games" id="player4Games">局数: 0</span>
+                        <span class="stat win-rate" id="player4WinRate">胜率: --</span>
+                        <span class="stat ident" id="player4Ident">?</span>
+
+                    </div>
+                </div>
+            </div>
+            <!-- 玩家位置 - 左上 -->
+            <div class="player-position left-top-position" id="player3">
+                <div class="player-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="player-info">
+                    <span class="player-name" id="player3Name">等待玩家</span>
+                    <span class="player-status" id="player3Status">?</span>
+                    <div class="player-stats">
+                        <span class="stat score" id="player3Score">积分: --</span>
+                        <span class="stat games" id="player3Games">局数: 0</span>
+                        <span class="stat win-rate" id="player3WinRate">胜率: --</span>
+                        <span class="stat ident" id="player3Ident">?</span>
+
+                    </div>
+                </div>
+            </div>
+            <!-- 玩家位置 - 右上 -->
+            <div class="player-position right-top-position" id="player2">
+                <div class="player-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="player-info">
+                    <span class="player-name" id="player2Name">等待玩家</span>
+                    <span class="player-status" id="player2Status">准备中</span>
+                    <div class="player-stats">
+                        <span class="stat score" id="player2Score">积分: --</span>
+                        <span class="stat games" id="player2Games">局数: 0</span>
+                        <span class="stat win-rate" id="player2WinRate">胜率: --</span>
+                        <span class="stat ident" id="player2Ident">?</span>
+
+                    </div>
+                </div>
+            </div>
+            <!-- 玩家位置 - 右 -->
+            <div class="player-position right-position" id="player1">
+                <div class="player-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="player-info">
+                    <span class="player-name" id="player1Name">等待玩家</span>
+                    <span class="player-status" id="player1Status">准备中</span>
+                    <div class="player-stats">
+                        <span class="stat score" id="player1Score">积分: --</span>
+                        <span class="stat games" id="player1Games">局数: 0</span>
+                        <span class="stat win-rate" id="player1WinRate">胜率: --</span>
+                        <span class="stat ident" id="player1Ident">?</span>
+
+                    </div>
+                </div>
+            </div>
+            <!-- 玩家位置 - 下 -->
+            <div class="player-position bottom-position current-player" id="currentPlayer">
+                <div class="player-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="player-info">
+                    <span class="player-name" th:text="${currentUser.nickname}" id="currentPlayerName"></span>
+                    <span class="player-status" id="currentPlayerStatus">房主</span>
+                    <div class="player-stats">
+                        <span class="stat score" id="currentPlayerScore">积分: --</span>
+                        <span class="stat games" id="currentPlayerGames">局数: 0</span>
+                        <span class="stat win-rate" id="currentPlayerWinRate">胜率: --</span>
+                        <span class="stat ident" id="currentPlayerIdent">?</span>
+                    </div>
+                </div>
+
+                <!-- 玩家手牌区域 -->
+                <div class="player-cards" id="myCards">
+                    <!-- 手牌将通过JS动态生成 -->
+                    <div class="card-placeholder">等待发牌...</div>
+                </div>
+
+                <!-- 操作按钮容器（初始隐藏） -->
+                <div class="action-buttons" id="actionButtons" style="display: none;">
+                    <button id="playBtn">出牌</button>
+                    <button id="passBtn">不出</button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-area">
+            <div class="chat-messages" id="chatMessages">
+                <!-- 聊天消息将通过JS动态生成 -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="输入消息...">
+                <button id="presetChatBtn" class="btn btn-secondary">
+                    <i class="fas fa-list"></i> 快速消息
+                </button>
+                <!-- 预设内容下拉列表（默认隐藏） -->
+                <div id="presetChatList" class="preset-chat-list">
+                    <div class="preset-chat-item" data-content="快点啊!都等的我花儿都谢了!">快点啊!都等的我花儿都谢了!</div>
+                    <div class="preset-chat-item" data-content="你丫的牌打的也忒好了!">你丫的牌打的也忒好了!</div>
+                    <div class="preset-chat-item" data-content="我是黄长涛!">我是黄长涛!</div>
+                    <div class="preset-chat-item" data-content="4！">4 </div>
+                    <div class="preset-chat-item" data-content="5！">5！</div>
+                    <div class="preset-chat-item" data-content="6！">6！</div>
+                    <div class="preset-chat-item" data-content="7！">7！</div>
+                    <div class="preset-chat-item" data-content="8！">8！</div>
+                    <div class="preset-chat-item" data-content="9！">9！</div>
+                </div>
+
+                <button id="sendMessageBtn" class="btn btn-primary">发送</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="scoreBoardModal" class="score-board-modal">
+    <div class="modal-content">
+        <div class="score-board-container">
+            <!-- 积分表格 -->
+            <table class="score-table">
+                <thead>
+                <tr>
+                    <th>玩家</th>
+                    <th>总积分</th>
+                    <th>上局</th>
+                </tr>
+                </thead>
+                <tbody id="scoreTableBody">
+                <!-- 积分数据将通过JS动态填充 -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary close-modal">关闭</button>
+        </div>
+
+    </div>
+</div>
+
+<script th:src="@{/js/room/sockjs.min.js}"></script>
+<script th:src="@{/js/room/stomp.min.js}"></script>
+<script th:src="@{/js/room/game-global.js}"></script>
+<script th:src="@{/js/room/gameUI.js}"></script>
+<script th:src="@{/js/room/utils.js}"></script>
+<script th:src="@{/js/room/room.js}"></script>
+
+<script th:inline="javascript">
+
+    const roomId = [[${roomId}]];
+    const username = [[${currentUser.username}]];
+    const isCreator = [[${isCreator}]];
+    const gameStarted = [[${gameStarted}]];
+</script>
+
+</body>
+</html>

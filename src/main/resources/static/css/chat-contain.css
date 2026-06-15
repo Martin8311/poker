@@ -1,0 +1,96 @@
+/* 聊天区域 */
+.chat-area {
+    height: 300px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* 聊天消息容器 - 核心滚动设置 */
+#chatMessages {
+    height: 300px; /* 固定高度，根据需要调整 */
+    overflow-y: auto; /* 内容超出时显示垂直滚动条 */
+    overflow-x: hidden; /* 禁止水平滚动 */
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    scroll-behavior: smooth; /* 滚动平滑过渡 */
+}
+
+.chat-messages {
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background-color: #f5f5f5;
+    line-height: 1.2;
+}
+
+.chat-input {
+    display: flex;
+    border-top: 1px solid #ddd;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    outline: none;
+}
+
+.chat-input button {
+    padding: 0 20px;
+}
+
+/* 时间样式：蓝色，方括号已在HTML中添加 */
+.message-time {
+    color: #2c7ad6; /* 蓝色 */
+    margin-right: 10px;
+    font-size: 0.9em;
+}
+
+/* 用户名样式：绿色 */
+.message-sender {
+    color: #2a9d54; /* 绿色 */
+    font-weight: 600;
+}
+
+/* 冒号样式：增加间距 */
+.message-colon {
+    margin: 0 6px;
+    color: #666;
+}
+
+/* 消息内容样式 */
+.message-text {
+    color: #333;
+}
+
+.btn-secondary {
+    background-color: #eee;
+    color: #333;
+    margin-right: 5px;
+}
+
+.preset-chat-list {
+    display: none;
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    background-color: white;
+    border: 2px solid #ffccaa;
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 10;
+    width: 300px;
+}
+.preset-chat-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.preset-chat-item:hover {
+    background-color: #f0f0f0;
+}

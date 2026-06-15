@@ -1,0 +1,113 @@
+/* 出牌容器样式调整 */
+.played-cards-container {
+    position: absolute;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 150px;
+}
+
+/* 单张卡牌的基础样式 */
+.played-card {
+    /* 取消默认的margin，避免影响堆叠精度 */
+    margin: 0;
+    /* 确保后添加的牌显示在上方（覆盖左侧的牌） */
+    z-index: 1;
+}
+
+/* 第一张牌的层级最低，后续牌层级递增 */
+.played-card:nth-child(1) { z-index: 3; }
+.played-card:nth-child(2) { z-index: 4; }
+.played-card:nth-child(3) { z-index: 5; }
+.played-card:nth-child(4) { z-index: 6; }
+.played-card:nth-child(5) { z-index: 7; }
+.played-card:nth-child(6) { z-index: 8; }
+.played-card:nth-child(7) { z-index: 9; }
+.played-card:nth-child(8) { z-index: 10; }
+/* 可根据最大出牌数量继续添加 */
+
+/* 定位5个玩家区域 */
+/* 分别定位5个出牌区（围绕牌桌） */
+/*.played-cards-container[data-player="player1-card"] { !* 右侧玩家出牌区 *!*/
+/*    top: 60%;*/
+/*    right: 100px;*/
+/*    transform: translateY(-50%);*/
+/*}*/
+
+/*.played-cards-container[data-player="player2-card"] { !* 右上玩家出牌区 *!*/
+/*    top: 20%;*/
+/*    right: 20%;*/
+/*    transform: translateX(50%);*/
+/*}*/
+
+/*.played-cards-container[data-player="player3-card"] { !* 左上玩家出牌区 *!*/
+/*    top: 20%;*/
+/*    left: 20%;*/
+/*    transform: translateX(-50%);*/
+/*}*/
+
+/*.played-cards-container[data-player="player4-card"] { !* 左侧玩家出牌区 *!*/
+/*    top: 60%;*/
+/*    left: 50px;*/
+/*    transform: translateY(-50%);*/
+/*}*/
+
+/*.played-cards-container[data-player="currentPlayer-card"] { !* 当前玩家出牌区 *!*/
+/*    bottom: 10px;*/
+/*    left: 50%;*/
+/*    transform: translateX(-50%);*/
+/*}*/
+
+/* 分别定位5个出牌区（围绕牌桌） */
+.played-cards-container[data-player="player1-card"] { /* 右侧玩家出牌区 */
+    top: 60%;
+    right: 20%;
+    transform: translateY(-50%);
+}
+
+.played-cards-container[data-player="player2-card"] { /* 右上玩家出牌区 */
+    top: 20%;
+    right: 30%;
+    transform: translateX(50%);
+}
+
+.played-cards-container[data-player="player3-card"] { /* 左上玩家出牌区 */
+    top: 20%;
+    left: 20%;
+    transform: translateX(-50%);
+}
+
+.played-cards-container[data-player="player4-card"] { /* 左侧玩家出牌区 */
+    top: 60%;
+    left: 30px;
+    transform: translateY(-50%);
+}
+
+.played-cards-container[data-player="currentPlayer-card"] { /* 当前玩家出牌区 */
+    bottom: 10%;
+    left: 40%;
+    transform: translateX(-50%);
+}
+
+
+
+#currentPlayer {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%; /* 占满游戏区域底部宽度 */
+    max-width: 800px;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* 手牌容器：横向滚动，避免多牌溢出 */
+#myCards {
+    display: flex;
+    gap: 5px;
+    padding: 10px 0;
+    overflow-x: auto; /* 横向滚动 */
+    overflow-y: hidden;
+    width: 100%;
+    box-sizing: border-box;
+}

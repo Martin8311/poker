@@ -1,0 +1,29 @@
+/* 倒计时容器样式：压缩垂直内边距，控制整体高度 */
+.turn-timer {
+    color: #dc3545;
+    font-weight: bold;
+    text-align: center;
+    padding: 3px 10px; /* 上下内边距从10px改为5px，左右保持10px */
+    border: 2px dashed #dc3545;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.8);
+    /* 新增：限制容器最小/最大高度，避免异常拉伸 */
+    min-height: 40px;
+    max-height: 60px;
+    display: flex; /* 用flex布局更精准控制内部元素垂直对齐 */
+    flex-direction: column;
+    justify-content: center; /* 内部元素垂直居中，减少多余空白 */
+}
+
+/* 倒计时标签样式：缩小字体和底部间距 */
+.timer-label {
+    font-size: 12px; /* 从14px缩小 */
+    margin-bottom: 2px; /* 从5px缩小 */
+    line-height: 1; /* 强制行高与字体大小一致 */
+}
+
+/* 倒计时数值样式：调整字体大小和行高 */
+.timer-value {
+    font-size: 20px; /* 从24px适当缩小，根据需求调整 */
+    line-height: 1; /* 行高与字体大小一致，消除垂直空白 */
+}

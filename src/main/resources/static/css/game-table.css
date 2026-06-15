@@ -1,0 +1,206 @@
+/* 游戏区域样式 */
+.game-area {
+    position: relative;
+    background-color: #f0f5f0;
+    width: 100%;
+    aspect-ratio: 16/9;
+    min-height: 400px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    border: 3px solid #faafff;
+}
+
+.card-table {
+    position: relative;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    height: 70%;
+    background-color: #2E7D32; /* 牌桌绿色 */
+    border-radius: 50%; /* 圆形牌桌更符合视觉习惯 */
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) inset;
+    border: 10px solid #8b4513;
+    overflow: hidden;
+}
+
+.table-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+/* 手牌区域 */
+.player-cards {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.card-placeholder {
+    width: 80px;
+    height: 120px;
+    background-color: #f0f0f0;
+    border: 1px dashed #999;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: #aaa;
+    font-size: 14px;
+}
+
+/* 当前玩家手牌区域容器 */
+#myCards {
+    position: relative; /* 作为卡牌绝对定位的参考容器 */
+    width: 100%; /* 占满父容器宽度 */
+    min-height: 160px; /* 确保足够高度容纳卡牌 */
+    padding: 15px 20px; /* 内边距，避免卡牌贴边 */
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: visible; /* 允许卡牌部分超出容器，增强堆叠感 */
+}
+
+/* 发牌前的占位提示 */
+.card-placeholder {
+    color: #666;
+    font-size: 14px;
+    padding: 10px 20px;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+}
+
+/* 单张扑克牌基础样式 */
+.card {
+    position: absolute; /* 脱离文档流，实现堆叠 */
+    width: 90px; /* 放大卡牌宽度 */
+    height: 130px; /* 放大卡牌高度 */
+    border-radius: 8px; /* 圆角更明显 */
+    overflow: hidden;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2); /* 增强阴影立体感 */
+    transition: all 0.2s ease; /* 动画过渡效果 */
+    cursor: pointer;
+    z-index: 1; /* 默认层级 */
+}
+
+/* 卡牌内部容器 */
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* 卡牌图片样式 */
+.card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 保持图片比例，填满卡牌 */
+}
+
+/* 堆叠效果：第n张牌的偏移量和层级 */
+/* 前20张牌的堆叠规则（超过10张可通过JS动态生成） */
+.card:nth-child(1) {
+    left: 20px;
+    z-index: 1;
+}
+.card:nth-child(2) {
+    left: 50px;
+    z-index: 2;
+}
+.card:nth-child(3) {
+    left: 80px;
+    z-index: 3;
+}
+.card:nth-child(4) {
+    left: 110px;
+    z-index: 4;
+}
+.card:nth-child(5) {
+    left: 140px;
+    z-index: 5;
+}
+.card:nth-child(6) {
+    left: 170px;
+    z-index: 6;
+}
+.card:nth-child(7) {
+    left: 200px;
+    z-index: 7;
+}
+.card:nth-child(8) {
+    left: 230px;
+    z-index: 8;
+}
+.card:nth-child(9) {
+    left: 260px;
+    z-index: 9;
+}
+.card:nth-child(10) {
+    left: 290px;
+    z-index: 10;
+}
+
+.card:nth-child(11) {
+    left: 320px;
+    z-index: 11;
+}
+
+.card:nth-child(12) {
+    left: 350px;
+    z-index: 12;
+}
+
+.card:nth-child(13) {
+    left: 380px;
+    z-index: 13;
+}
+.card:nth-child(14) {
+    left: 410px;
+    z-index: 14;
+}
+
+.card:nth-child(15) {
+    left: 440px;
+    z-index: 15;
+}
+
+.card:nth-child(16) {
+    left: 470px;
+    z-index: 16;
+}
+
+.card:nth-child(17) {
+    left: 500px;
+    z-index: 17;
+}
+
+.card:nth-child(18) {
+    left: 530px;
+    z-index: 18;
+}
+
+.card:nth-child(19) {
+    left: 560px;
+    z-index: 19;
+}
+
+.card:nth-child(20) {
+    left: 590px;
+    z-index: 20;
+}
+
+
+/* 鼠标悬停效果：突出显示选中的牌 */
+.card:hover {
+    /* z-index: 20; */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* 增强阴影 */
+}

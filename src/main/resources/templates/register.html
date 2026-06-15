@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>tft模拟器 - 注册</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="auth-container">
+    <h1>tft模拟器</h1>
+    <h2>用户注册</h2>
+
+    <!-- 错误消息 -->
+    <div th:if="${error}" class="error-message">
+        <p th:text="${error}"></p>
+    </div>
+
+    <form th:action="@{/register}" th:object="${user}" method="post">
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" th:field="*{username}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="username">昵称</label>
+            <input type="text" id="nickname" th:field="*{nickname}" required>
+        </div>
+
+<!--        <div class="form-group">-->
+<!--            <label for="email">邮箱</label>-->
+<!--            <input type="email" id="email" th:field="*{email}" required>-->
+<!--        </div>-->
+
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" th:field="*{password}" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">注册</button>
+        </div>
+    </form>
+
+    <p>已有账号？<a th:href="@{/login}">立即登录</a></p>
+</div>
+</body>
+</html>
