@@ -1,5 +1,12 @@
 package martin.game.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -10,14 +17,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 /**
  * Redis 配置。
  *
- * <p>自定义 {@link RedisTemplate} 的序列化方式：
+ * <p>{@link RedisTemplate} 的 key 用 String 序列化（便于排查），value 用 JSON 序列化。
+ * value 的 {@code ObjectMapper} 做了三项关键配置，以支持把 {@code Room}（含 User / Card /
+ * LocalDateTime 等）正确存取：
  * <ul>
- *     <li>key / hashKey 使用 String 序列化，保证 Redis 中键名可读、便于排查；</li>
- *     <li>value / hashValue 使用 JSON 序列化，便于缓存任意对象。</li>
+ *     <li>仅按字段序列化，绕过 {@code UserDetails} 等计算型 getter；</li>
+ *     <li>注册 {@code JavaTimeModule}，支持 {@code LocalDateTime}；</li>
+ *     <li>开启 default typing（写入 {@code @class}），保证复杂 / 多态对象能正确反序列化。</li>
  * </ul>
  *
- * <p>排行榜（ZSet，member/score 均为简单类型）相关操作直接使用 Spring Boot
- * 自动配置的 {@code StringRedisTemplate}，无需经过本模板。
+ * <p>排行榜（ZSet，member/score 为简单类型）仍直接用 {@code StringRedisTemplate}。
  */
 @Configuration
 public class RedisConfig {
@@ -27,8 +36,9 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
+        GenericJackson2JsonRedisSerializer jsonSerializer =
+                new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
 
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
@@ -36,5 +46,21 @@ public class RedisConfig {
         template.setHashValueSerializer(jsonSerializer);
         template.afterPropertiesSet();
         return template;
+    }
+
+    private ObjectMapper buildRedisObjectMapper() {
+        ObjectMapper om = new ObjectMapper();
+        // 仅按字段序列化，忽略 getter/setter（避免 UserDetails 计算属性等）
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE);
+        om.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+        // 支持 Java 8 时间类型（如 User.createTime）
+        om.registerModule(new JavaTimeModule());
+        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // 写入类型信息（@class），保证复杂 / 多态对象反序列化
+        om.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY);
+        return om;
     }
 }

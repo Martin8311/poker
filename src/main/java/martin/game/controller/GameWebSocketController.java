@@ -1,6 +1,5 @@
 package martin.game.controller;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import martin.game.model.*;
 import martin.game.service.GameService;
 import martin.game.service.RoomService;
@@ -11,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
@@ -60,7 +58,6 @@ public class GameWebSocketController {
         return message;
     }
 
-
     /**
      * 处理游戏开始(由房主开始)
      */
@@ -71,24 +68,21 @@ public class GameWebSocketController {
             GameAction action,
             Authentication authentication) {
 
-        Room room = roomService.getRoom(roomId);
-
-        if(room.getPlayers().size() < 5){
-            action.setMessage("人数不足 5 人, 无法开始");
-            action.setStatus("error");
-            /*
-                TODO: Release版 请将条件置为: room.getReadyNumOfPlayers() != 4
-                Debug版 room.getReadyNumOfPlayers() > 4
-             */
-        } else if(room.getReadyNumOfPlayers() != 4){
-            action.setMessage("有玩家未准备, 无法开始");
-            action.setStatus("error");
-        } else{
-            action.setMessage("游戏即将开始");
-            action.setStatus("success");
-            room.setGameState(GameState.READY_TO_START);
-            room.setGameStarted(true);
-        }
+        roomService.executeWithLock(roomId, room -> {
+            if (room.getPlayers().size() < 5) {
+                action.setMessage("人数不足 5 人, 无法开始");
+                action.setStatus("error");
+            } else if (room.getReadyNumOfPlayers() != 4) {
+                action.setMessage("有玩家未准备, 无法开始");
+                action.setStatus("error");
+            } else {
+                action.setMessage("游戏即将开始");
+                action.setStatus("success");
+                room.setGameState(GameState.READY_TO_START);
+                room.setGameStarted(true);
+            }
+            return null;
+        });
 
         return action;
     }
@@ -103,51 +97,24 @@ public class GameWebSocketController {
             GameAction action,
             Authentication authentication) {
 
-        if(!action.getUsername().equals(roomService.getRoom(roomId).getCreator().getUsername())){
+        Room room = roomService.getRoom(roomId);
+        if (!action.getUsername().equals(room.getCreator().getUsername())) {
             action.setType("UN_KNOWN");
             return action;
         }
 
-        gameService.startGame(roomId);
-        Map<String, List<Card>> playerCards = gameService.getRoomCards(roomId);
-        GameUtils.sortPlayerCards(playerCards);
+        gameService.startGame(roomId); // 内部发牌、排序并写回 Redis
 
-        // 广播发牌消息, 每个玩家再通过POST方法取牌，避免牌被他人看见
+        // 广播发牌消息，每个玩家再通过 POST 取自己的牌，避免被他人看见
         action.setType("ALLOCATE_CARD");
         return action;
     }
 
     @PostMapping("/rooms/{roomId}/get_card")
-    public ResponseEntity<List<Card>> handleGameGetCard(@PathVariable String roomId, @RequestBody String username){
-        Map<String, List<Card>> playerCards = gameService.getRoomCards(roomId);
-
-        logger.info(playerCards);
-        List<Card> cards = playerCards.get(username);
+    public ResponseEntity<List<Card>> handleGameGetCard(@PathVariable String roomId, @RequestBody String username) {
+        Room room = roomService.getRoom(roomId);
+        List<Card> cards = room.getPlayersCards().get(username);
         return ResponseEntity.ok(cards);
-    }
-
-    /**
-     * 处理游戏动作的核心逻辑 TODO: 弃用
-     */
-    private void processGameAction(String roomId, GameAction action) {
-        // 获取房间并加锁
-        var room = roomService.getRoomWithLock(roomId);
-        if (room == null) {
-            action.setStatus("error");
-            action.setMessage("房间不存在");
-            return;
-        }
-
-        try {
-            // 处理具体的游戏动作（出牌、跳过等）
-            // 根据房间当前状态和游戏规则处理动作
-            // ...
-
-            action.setStatus("success");
-        } finally {
-            // 确保释放锁
-            roomService.releaseRoomLock(roomId);
-        }
     }
 
     /**
@@ -157,18 +124,19 @@ public class GameWebSocketController {
     @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameTurn(@DestinationVariable String roomId,
                                     GameRound round,
-                                    Authentication authentication){
+                                    Authentication authentication) {
 
-        String firstPlayer = gameService.initFirstTurn(roomId);
-        Room room = roomService.getRoom(roomId);
+        roomService.executeWithLock(roomId, room -> {
+            String firstPlayer = gameService.initFirstTurn(room);
+            room.setLastActorUsername(null);
+            room.setLastCards(null);
 
-        room.setLastActorUsername(null);
-        room.setLastCards(null);
-
-        round.setCurrentTurnPlayer(firstPlayer);
-        round.setPlayerCards(null);
-        round.setType("Turn");
-        round.setFirst(true);
+            round.setCurrentTurnPlayer(firstPlayer);
+            round.setPlayerCards(null);
+            round.setType("Turn");
+            round.setFirst(true);
+            return null;
+        });
         return round;
     }
 
@@ -179,38 +147,37 @@ public class GameWebSocketController {
     @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameActor(@DestinationVariable String roomId,
                                      GameRound round,
-                                     Authentication authentication){
+                                     Authentication authentication) {
 
-        Room room = roomService.getRoom(roomId);
+        roomService.executeWithLock(roomId, room -> {
+            room.setLastCards(round.getPlayerCards());
+            room.setLastActorUsername(round.getCurrentTurnPlayer());
 
-        room.setLastCards(round.getPlayerCards());
-        room.setLastActorUsername(round.getCurrentTurnPlayer());
+            String nextActorUsername = gameService.nextActor(room, round.getCurrentTurnPlayer());
+            round.setNextActor(nextActorUsername);
+            room.setCurrentActorUsername(nextActorUsername);
+            round.setType("ACTOR");
 
-        String nextActorUsername = gameService.nextActor(roomId, round.getCurrentTurnPlayer());
-        round.setNextActor(nextActorUsername);
-        room.setCurrentActorUsername(nextActorUsername);
-        round.setType("ACTOR");
-
-        round.setFirst(false); // 下一人不带牌权
-        room.setFirst(false);
+            round.setFirst(false); // 下一人不带牌权
+            room.setFirst(false);
+            return null;
+        });
         return round;
     }
 
     @PostMapping("/rooms/{roomId}/actor")
-    public ResponseEntity<String> handleGameActor(@PathVariable String roomId, @RequestBody GameRound round){
+    public ResponseEntity<String> handleGameActor(@PathVariable String roomId, @RequestBody GameRound round) {
         List<Card> cards = round.getPlayerCards();
 
-        if(GameUtils.check(cards, roomService.getRoom(roomId).getLastCards())){
-            GameUtils.removeCards(roomService.getRoom(roomId).getPlayersCards().get(round.getCurrentTurnPlayer()), cards);
-            return ResponseEntity.ok("ok");
-        }
+        String result = roomService.executeWithLock(roomId, room -> {
+            if (GameUtils.check(cards, room.getLastCards())) {
+                GameUtils.removeCards(room.getPlayersCards().get(round.getCurrentTurnPlayer()), cards);
+                return "ok";
+            }
+            return "你选择的牌不符合规则!";
+        });
 
-        // TODO: 发布前一定删除此段代码
-//        if(true){
-//            return ResponseEntity.ok("ok");
-//        }
-
-        return ResponseEntity.ok("你选择的牌不符合规则!");
+        return ResponseEntity.ok(result != null ? result : "房间不存在");
     }
 
     /**
@@ -218,26 +185,26 @@ public class GameWebSocketController {
      */
     @MessageMapping("/rooms/{roomId}/pass")
     @SendTo("/topic/rooms.{roomId}")
-    public GameRound handleGamePass(@DestinationVariable String roomId, GameRound round){
-        Room room = roomService.getRoom(roomId);
+    public GameRound handleGamePass(@DestinationVariable String roomId, GameRound round) {
+        roomService.executeWithLock(roomId, room -> {
+            round.setType("PASS");
 
-        round.setType("PASS");
+            String nextActorUsername = gameService.nextActor(room, round.getCurrentTurnPlayer());
+            round.setNextActor(nextActorUsername);
+            room.setCurrentActorUsername(nextActorUsername);
+            round.setPlayerCards(null);
 
-        String nextActorUsername = gameService.nextActor(roomId, round.getCurrentTurnPlayer());
-        round.setNextActor(nextActorUsername);
-        room.setCurrentActorUsername(nextActorUsername);
-        round.setPlayerCards(null);
-
-        // 下一出牌人 与 上一出牌人为同一人时 形成牌权
-        if(round.getNextActor().equals(room.getLastActorUsername())) {
-            round.setFirst(true);
-            room.setLastCards(null);
-            room.setFirst(true);
-        }else{
-            round.setFirst(false);
-            room.setFirst(false);
-        }
-
+            // 下一出牌人 与 上一出牌人为同一人时 形成牌权
+            if (round.getNextActor().equals(room.getLastActorUsername())) {
+                round.setFirst(true);
+                room.setLastCards(null);
+                room.setFirst(true);
+            } else {
+                round.setFirst(false);
+                room.setFirst(false);
+            }
+            return null;
+        });
         return round;
     }
 
@@ -246,78 +213,76 @@ public class GameWebSocketController {
      */
     @MessageMapping("/rooms/{roomId}/hand-empty")
     @SendTo("/topic/rooms.{roomId}")
-    public GameRound handleGameHandEmptyRequest(@DestinationVariable String roomId, GameRound round){
+    public GameRound handleGameHandEmptyRequest(@DestinationVariable String roomId, GameRound round) {
+        roomService.executeWithLock(roomId, room -> {
+            String username = round.getCurrentTurnPlayer();
 
-        Room room = roomService.getRoom(roomId);
-        String username = round.getCurrentTurnPlayer();
+            room.getHandEmptyMap().put(username, true);
+            Integer size = room.getPlayersSettlementSequenceMap().size() + 1;
+            room.getPlayersSettlementSequenceMap().put(username, size);
+            room.getPlayersSettlementSequencesMap().put(size, username);
 
-        room.getHandEmptyMap().put(username, true);
-        Integer size = room.getPlayersSettlementSequenceMap().size() + 1;
-        room.getPlayersSettlementSequenceMap().put(username, size);
-        room.getPlayersSettlementSequencesMap().put(size, username);
+            // 有 4 名玩家出空 或 提前判定结束 → 游戏结束并结算
+            if (room.getPlayersSettlementSequenceMap().size() >= 4 || gameService.checkGameIsOver(room)) {
+                Set<User> s = room.getPlayers();
+                Map<String, Integer> nicknameWithScoreMap = new HashMap<>();
+                Map<String, Integer> totalScoreMap = room.getTotalScoreMap();
+                Map<String, Integer> nicknameWithTotalScoreMap = new HashMap<>();
 
-        if(room.getPlayersSettlementSequenceMap().size() >= 4 || gameService.checkGameIsOver(roomId)){ // 有4名玩家出空 游戏结束
-            Set<User> s = room.getPlayers();
-            Map<String, Integer> scoreMap;
-            Map<String, Integer> nicknameWithScoreMap = new HashMap<>();
-            Map<String, Integer> totalScoreMap = room.getTotalScoreMap();
-            Map<String, Integer> nicknameWithTotalScoreMap = new HashMap<>();
-
-            logger.info(totalScoreMap);
-
-            for(User user : s){
-                if(!room.getPlayersSettlementSequenceMap().containsKey(user.getUsername())){
-                    Integer cap = room.getPlayersSettlementSequenceMap().size() + 1;
-                    room.getPlayersSettlementSequenceMap().put(user.getUsername(), cap);
-                    room.getPlayersSettlementSequencesMap().put(cap, user.getUsername());
+                // 给尚未出空的玩家补上结算顺序
+                for (User user : s) {
+                    if (!room.getPlayersSettlementSequenceMap().containsKey(user.getUsername())) {
+                        Integer cap = room.getPlayersSettlementSequenceMap().size() + 1;
+                        room.getPlayersSettlementSequenceMap().put(user.getUsername(), cap);
+                        room.getPlayersSettlementSequencesMap().put(cap, user.getUsername());
+                    }
                 }
+
+                round.setType("GAME_OVER");
+                Map<String, Integer> scoreMap = gameService.calculateResult(room);
+
+                for (User user : s) {
+                    String name = user.getUsername();
+                    userService.updateUserScoreInfo(name, scoreMap.get(name));
+                    totalScoreMap.put(name, totalScoreMap.get(name) + scoreMap.get(name));
+                    nicknameWithScoreMap.put(user.getNickname(), scoreMap.get(name));
+                    nicknameWithTotalScoreMap.put(user.getNickname(), totalScoreMap.get(name));
+                }
+
+                round.setScoreMap(nicknameWithScoreMap);
+                round.setTotalScoreMap(nicknameWithTotalScoreMap);
+                logger.info(scoreMap);
+                gameService.restartGame(room); // 重置并重新发牌（同一锁内写回）
+                return null;
             }
 
-            round.setType("GAME_OVER");
-            scoreMap = gameService.calculateResult(roomId);
+            room.setLastActorUsername(gameService.nextActor(room, username)); // 给风
 
-            for(User user : s){
-                String name = user.getUsername();
-                userService.updateUserScoreInfo(name, scoreMap.get(name));
-                totalScoreMap.put(name, totalScoreMap.get(name) + scoreMap.get(name));
-                nicknameWithScoreMap.put(user.getNickname(), scoreMap.get(name));
-                nicknameWithTotalScoreMap.put(user.getNickname(), totalScoreMap.get(name));
-            }
-
-            round.setScoreMap(nicknameWithScoreMap);
-            round.setTotalScoreMap(nicknameWithTotalScoreMap);
-            logger.info(scoreMap);
-            gameService.restartGame(roomId);
-            return round;
-        }
-
-        room.setLastActorUsername(gameService.nextActor(roomId, username)); // 给风
-
-        round.setType("HAND_EMPTY");
-        round.setActor(username);
-        round.setTeam(room.getPlayersTeamMap().get(username));
-        round.setOrder(room.getPlayersSettlementSequenceMap().get(username));
+            round.setType("HAND_EMPTY");
+            round.setActor(username);
+            round.setTeam(room.getPlayersTeamMap().get(username));
+            round.setOrder(room.getPlayersSettlementSequenceMap().get(username));
+            return null;
+        });
         return round;
     }
 
     /**
-     * restart 重新对局
+     * restart 重新对局（手牌已在 restartGame 中重新发好，这里只广播通知）
      */
     @MessageMapping("/rooms/{roomId}/restart")
     @SendTo("/topic/rooms.{roomId}")
-    public GameRound handleGameRestart(@DestinationVariable String roomId, @RequestBody GameRound round){
-        Map<String, List<Card>> playerCards = gameService.getRoomCards(roomId);
-        GameUtils.sortPlayerCards(playerCards);
+    public GameRound handleGameRestart(@DestinationVariable String roomId, @RequestBody GameRound round) {
         round.setType("GAME_RESTART");
         return round;
     }
 
     /**
-     * recover 重连恢复
+     * recover 重连恢复（只读）
      */
     @PostMapping("/rooms/{roomId}/recover")
     @ResponseBody
-    public GameRound handleGameRecover(@PathVariable String roomId, @RequestBody String username){
+    public GameRound handleGameRecover(@PathVariable String roomId, @RequestBody String username) {
         Room room = roomService.getRoom(roomId);
         GameRound round = new GameRound();
         round.setType("RECOVER");

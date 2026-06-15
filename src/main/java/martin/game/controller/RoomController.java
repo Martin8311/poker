@@ -102,8 +102,8 @@ public class RoomController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userService.findByUsername(authentication.getName());
 
-        // 获取房间信息
-        Room room = roomService.getRoomWithLock(roomId);
+        // 获取房间信息（只读，无需加锁）
+        Room room = roomService.getRoom(roomId);
         if (room == null) {
             model.addAttribute("error", "房间不存在或已关闭");
             return "hall";
@@ -119,7 +119,7 @@ public class RoomController {
                 return "hall";
             }
 
-            // 3. 新增：将玩家列表转换为JSON字符串
+            // 将玩家列表转换为JSON字符串
             String playersJson = objectMapper.writeValueAsString(room.getPlayers());
 
             // 添加房间信息到模型
@@ -134,9 +134,6 @@ public class RoomController {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             return "hall";
-        } finally {
-            // 释放房间锁
-            roomService.releaseRoomLock(roomId);
         }
     }
 

@@ -85,20 +85,22 @@ public class RoomMessageHandler {
             throw new RuntimeException("用户未登录");
         }
 
-        Room room = roomService.getRoom(roomId);
-        room.removePlayer(currentUser);
+        // 在分布式锁内移除玩家并写回，返回剩余人数
+        Integer remaining = roomService.executeWithLock(roomId, room -> {
+            room.removePlayer(currentUser);
+            gameMessage.setSeatPlayerMap(room.getSeatTypePlayerMap());
+            gameMessage.setNumOfPlayers(room.getPlayers().size());
+            return room.getPlayers().size();
+        });
 
         gameMessage.setContent(currentUser.getNickname() + " 离开了房间!");
         logger.info(currentUser.getNickname() + " 离开了房间!");
         gameMessage.setSenderNickname("System");
-        gameMessage.setSeatPlayerMap(room.getSeatTypePlayerMap());
-        gameMessage.setNumOfPlayers(room.getPlayers().size());
 
-        logger.info(room.getPlayers());
-        logger.info(room.getSeatTypePlayerMap());
-
-        if(room.getPlayers().size() == 0)
+        // 房间空了则删除
+        if (remaining != null && remaining == 0) {
             roomService.removeRoom(roomId);
+        }
 
         return gameMessage;
     }

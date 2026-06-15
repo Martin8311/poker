@@ -1,12 +1,14 @@
 package martin.game.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 扑克牌实体类
  * 包含花色、点数、牌值等核心属性
  */
 @Data
+@NoArgsConstructor
 public class Card {
     private String name;
     private String url;

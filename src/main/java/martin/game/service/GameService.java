@@ -1,6 +1,7 @@
 package martin.game.service;
 
 import martin.game.model.*;
+import martin.game.utils.GameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,36 +15,21 @@ public class GameService {
 
     @Autowired
     private RoomService roomService;
-    private Map<String, Map<String, List<Card>>> playerCardsMap = new ConcurrentHashMap<>();
 
     private static final Logger logger = LogManager.getLogger(GameService.class);
 
     /**
-     * 开始游戏并发牌
+     * 开始游戏并发牌（在分布式锁内完成发牌、排序、写回）
      */
     public boolean startGame(String roomId) {
-        Room room = roomService.getRoomWithLock(roomId);
-        try {
-            // 检查游戏状态（避免重复开始）
-//            if (room.getGameState() != GameState.WAITING_FOR_PLAYERS &&
-//                    room.getGameState() != GameState.READY_TO_START) {
-//                return false;
-//            }
-
-            // 3. 给玩家发牌（按房间内玩家数量平均分配）
+        Boolean result = roomService.executeWithLock(roomId, room -> {
             Map<String, List<Card>> playerCards = dealCards(room.getPlayers());
-            logger.info(roomId);
-            logger.info(playerCards);
-            // 4. 存储手牌信息
+            GameUtils.sortPlayerCards(playerCards);
             room.setPlayersCards(playerCards);
-            playerCardsMap.put(roomId, playerCards);
-
-            // 5. 更新房间状态
             room.setGameState(GameState.GAME_IN_PROGRESS);
             return true;
-        } finally {
-            roomService.releaseRoomLock(roomId);
-        }
+        });
+        return Boolean.TRUE.equals(result);
     }
 
     /**
@@ -130,8 +116,6 @@ public class GameService {
             boolean hasHeart4 = false;
 
             for (Card card : cards) {
-                // 假设Card类有getSuit()获取花色，getValue()获取点数
-                // 这里的"红心"、3、4需要根据实际枚举或常量调整
                 if ("Heart".equals(card.getSuit())) {
                     if ("3".equals(card.getRank())) {
                         hasHeart3 = true;
@@ -140,7 +124,6 @@ public class GameService {
                     }
                 }
 
-                // 提前退出内层循环
                 if (hasHeart3 && hasHeart4) {
                     return true;
                 }
@@ -151,28 +134,14 @@ public class GameService {
     }
 
     /**
-     * 获取玩家的手牌
+     *  发牌后初始化回合：找到持有红桃3的玩家作为首个出牌者。
+     *  接收 Room 参数（由 executeWithLock 在锁内传入），修改随锁写回 Redis。
      */
-    public List<Card> getPlayerCards(String roomId, String username) {
-        Map<String, List<Card>> playerCards = playerCardsMap.get(roomId);
-        return playerCards != null ? playerCards.get(username) : new ArrayList<>();
-    }
-
-    /**
-     * 房间发牌情况
-     */
-    public Map<String, List<Card>> getRoomCards(String roomId){
-        return playerCardsMap.get(roomId);
-    }
-
-    /**
-     *  发牌后初始化回合：找到持有红桃3的玩家作为首个出牌者
-     */
-    public String initFirstTurn(String roomId){
+    public String initFirstTurn(Room room){
         // 1 获取所有玩家手牌
-        Map<String, List<Card>> playerCards = getRoomCards(roomId);
-        Map<String, Integer> teamMap = roomService.getRoom(roomId).getPlayersTeamMap();
-        Set<User> set = roomService.getRoom(roomId).getPlayers();
+        Map<String, List<Card>> playerCards = room.getPlayersCards();
+        Map<String, Integer> teamMap = room.getPlayersTeamMap();
+        Set<User> set = room.getPlayers();
 
         for(User u : set){
             teamMap.put(u.getUsername(), 0);
@@ -199,12 +168,11 @@ public class GameService {
         }
         logger.info("tempMap:" + teamMap);
         logger.info("firstPlayer:"+ firstPlayer);
-        roomService.getRoom(roomId).setBigGhostPlayerUsername(firstPlayer);
+        room.setBigGhostPlayerUsername(firstPlayer);
         return firstPlayer;
     }
 
-    public String nextActor(String roomId, String currentPlayer) {
-        Room room = roomService.getRoom(roomId);
+    public String nextActor(Room room, String currentPlayer) {
         Map<String, SeatType> seatMap = room.getSeatTypePlayerMap();
         Map<String, Boolean> handEmptyMap = room.getHandEmptyMap();
 
@@ -246,7 +214,6 @@ public class GameService {
 
             // 检查该玩家是否存在且未出空
             if (candidatePlayer != null) {
-                // 未出空（map中不存在该玩家，或存在但值为false）
                 boolean isEmpty = handEmptyMap.getOrDefault(candidatePlayer, false);
                 if (!isEmpty) {
                     return candidatePlayer; // 找到第一个未出空的玩家，返回
@@ -258,20 +225,22 @@ public class GameService {
         return null;
     }
 
-    public void restartGame(String roomId){
-        Room room = roomService.getRoom(roomId);
+    /**
+     * 重新对局：重置房间并重新发牌（在外层 executeWithLock 锁内调用，随锁写回）
+     */
+    public void restartGame(Room room){
         room.restart();
-        startGame(roomId);
+        Map<String, List<Card>> playerCards = dealCards(room.getPlayers());
+        GameUtils.sortPlayerCards(playerCards);
+        room.setPlayersCards(playerCards);
+        room.setGameState(GameState.GAME_IN_PROGRESS);
     }
 
     /**
-     * 根据阵营和 走的顺序计算结果
-     * @param roomId
-     * @return
+     * 根据阵营和走的顺序计算结果
      */
-    public Map<String, Integer> calculateResult(String roomId){
+    public Map<String, Integer> calculateResult(Room room){
         Map<String, Integer> scoreMap = new HashMap<>();
-        Room room = roomService.getRoom(roomId);
         Map<String, Integer> teamMap = room.getPlayersTeamMap();  // 0 好人 1 small 2 big
         Map<Integer, String> orderMap = room.getPlayersSettlementSequencesMap();
         Set<User> playersSet = room.getPlayers();
@@ -388,8 +357,7 @@ public class GameService {
     /**
      * 判断游戏是否结束
      */
-    public boolean checkGameIsOver(String roomId){
-        Room room = roomService.getRoom(roomId);
+    public boolean checkGameIsOver(Room room){
         Map<String, Integer> teamMap = room.getPlayersTeamMap();  // 0 好人 1 small 2 big
         logger.info(teamMap);
         Map<Integer, String> orderMap = room.getPlayersSettlementSequencesMap();

@@ -2,25 +2,58 @@ package martin.game.service;
 
 import martin.game.model.Room;
 import martin.game.model.User;
+import martin.game.repository.RoomRepository;
 import martin.game.utils.SHA256Utils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
+/**
+ * 房间服务。房间状态外置到 Redis（多实例共享），并发用 Redisson 分布式锁。
+ *
+ * <p>所有"读-改-写回"统一走 {@link #executeWithLock}：加分布式锁 → 从 Redis 读 Room
+ * → 业务回调修改 → 写回 Redis → 解锁，保证多实例下对同一房间的操作串行、一致。
+ */
 @Service
 public class RoomService {
-    // 使用ConcurrentHashMap确保线程安全的房间存储
-    private final Map<String, Room> rooms = new ConcurrentHashMap<>();
-    // 为每个房间创建独立的锁，实现细粒度控制
-    private final Map<String, ReentrantLock> roomLocks = new ConcurrentHashMap<>();
+
+    private static final String LOCK_PREFIX = "poker:room:lock:";
+
+    private final RoomRepository roomRepository;
+    private final RedissonClient redissonClient;
 
     private static final Logger logger = LogManager.getLogger(RoomService.class);
+
+    public RoomService(RoomRepository roomRepository, RedissonClient redissonClient) {
+        this.roomRepository = roomRepository;
+        this.redissonClient = redissonClient;
+    }
+
+    /**
+     * 在分布式锁保护下读取 Room、执行业务修改并写回 Redis。
+     *
+     * @return 业务回调的返回值；房间不存在时返回 null
+     */
+    public <T> T executeWithLock(String roomId, Function<Room, T> action) {
+        RLock lock = redissonClient.getLock(LOCK_PREFIX + roomId);
+        lock.lock();
+        try {
+            Room room = roomRepository.findById(roomId);
+            if (room == null) {
+                return null;
+            }
+            T result = action.apply(room);
+            roomRepository.save(room);
+            return result;
+        } finally {
+            lock.unlock();
+        }
+    }
 
     /**
      * 创建新房间
@@ -30,111 +63,79 @@ public class RoomService {
 
         Room room = new Room(roomId, creator);
         room.setInfo(roomDesc);
-        if(!roomPassword.equals("null")){
+        if (!roomPassword.equals("null")) {
             roomPassword = SHA256Utils.sha256Encrypt(roomPassword);
-            logger.info(creator.getUsername() + "创建了密码房间" + roomId + " 密码:" + roomPassword);
             room.setRoomPassword(roomPassword);
             room.setPublicRoom(false);
+            logger.info(creator.getUsername() + "创建了密码房间" + roomId);
         }
 
-        rooms.put(roomId, room);
+        roomRepository.save(room);
         logger.info(creator.getUsername() + "创建了房间" + roomId);
-        roomLocks.put(roomId, new ReentrantLock());
         return room;
     }
 
     /**
-     * 获取房间
+     * 获取房间（只读，无锁）
      */
     public Room getRoom(String roomId) {
-        return rooms.get(roomId);
+        return roomRepository.findById(roomId);
     }
 
     /**
      * 移除房间（当最后一个玩家离开时）
      */
     public void removeRoom(String roomId) {
-        rooms.remove(roomId);
+        roomRepository.delete(roomId);
     }
 
-
     /**
-     * 加入房间
-     * 使用tryLock避免长时间阻塞
+     * 加入房间（分布式锁保护）
      */
     public boolean joinRoom(String roomId, User user) {
-        ReentrantLock lock = roomLocks.get(roomId);
-        if (lock == null) {
-            return false;
-        }
-
-        try {
-            // 尝试获取锁，5秒超时
-            if (lock.tryLock(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                try {
-                    Room room = rooms.get(roomId);
-                    if (room != null && room.getPlayers().size() < 5) {
-                        return room.addPlayer(user);
-                    }
-                    return false;
-                } finally {
-                    lock.unlock();
-                }
+        Boolean result = executeWithLock(roomId, room -> {
+            if (room.getPlayers().size() < 5) {
+                return room.addPlayer(user);
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        return false;
+            return false;
+        });
+        return Boolean.TRUE.equals(result);
     }
 
     /**
      * 处理玩家发出准备 / 取消准备事件
      */
-    public void handleReadyEvent(String roomId, boolean isReady){
-        getRoom(roomId).readyChange(isReady);
+    public void handleReadyEvent(String roomId, boolean isReady) {
+        executeWithLock(roomId, room -> {
+            room.readyChange(isReady);
+            return null;
+        });
     }
 
     /**
-     * 获取所有可加入的房间（人数不足5人）
+     * 获取所有可加入的房间（人数不足 5 人且未开始）
      */
     public Set<Room> getAvailableRooms() {
-        return rooms.values().stream()
-                .filter(room -> room.getPlayers().size() < 5 && !room.isGameStarted())
-                .collect(Collectors.toSet());
+        return roomRepository.findAllAvailable();
     }
 
-    /**
-     * 获取房间并加锁（用于游戏操作）
-     */
-    public Room getRoomWithLock(String roomId) {
-        ReentrantLock lock = roomLocks.get(roomId);
-        if (lock != null) {
-            lock.lock();
-            return rooms.get(roomId);
-        }
-        return null;
-    }
-
-    /**
-     * 释放房间锁
-     */
-    public void releaseRoomLock(String roomId) {
-        ReentrantLock lock = roomLocks.get(roomId);
-        if (lock != null && lock.isHeldByCurrentThread()) {
-            lock.unlock();
-        }
-    }
-
-    // 生成唯一房间ID
+    // 生成唯一房间 ID
     private String generateUniqueRoomId() {
-        return "ROOM_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
+        return "ROOM_" + System.currentTimeMillis() + "_" + (int) (Math.random() * 1000);
     }
 
-    public String check_reconnect(String username){
-        for(Room room : rooms.values()){
-            for(User u : room.getPlayers()){
-                if(u.getUsername().equals(username)){
-                    return room.getRoomId();
+    /**
+     * 重连检测：扫描所有房间，找到该用户所在房间
+     */
+    public String check_reconnect(String username) {
+        for (String roomId : roomRepository.allRoomIds()) {
+            Room room = roomRepository.findById(roomId);
+            if (room == null) {
+                continue;
+            }
+            for (User u : room.getPlayers()) {
+                if (u.getUsername().equals(username)) {
+                    return roomId;
                 }
             }
         }
