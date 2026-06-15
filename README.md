@@ -7,6 +7,8 @@
 ![MySQL](https://img.shields.io/badge/MySQL-Druid-4479A1?logo=mysql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Leaderboard-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-STOMP%20Relay-FF6600?logo=rabbitmq&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-Load%20Balance-009639?logo=nginx&logoColor=white)
 ![Maven](https://img.shields.io/badge/Build-Maven-C71A36?logo=apachemaven&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
@@ -41,6 +43,7 @@
 | **持久层** | Spring Data JPA / Hibernate、MySQL、Druid 连接池 |
 | **缓存 / 排行榜** | Redis（Spring Data Redis、Lettuce、ZSet） |
 | **容器化** | Docker、Docker Compose（一键拉起 MySQL / Redis / RabbitMQ） |
+| **分布式 / 水平扩展** | Spring Session(Redis)、Redisson 分布式锁、RabbitMQ STOMP Broker Relay、Nginx 负载均衡 |
 | **模板引擎** | Thymeleaf |
 | **日志** | Log4j2 |
 | **工具** | Lombok、Maven |
@@ -150,6 +153,50 @@ mvnw.cmd spring-boot:run
 
 ---
 
+## 🌐 分布式部署（多实例 + Nginx 负载均衡）
+
+项目已完成**无状态化改造**，可水平扩展为「Nginx + 多应用实例」集群。一条命令即可拉起 **Nginx + 2 个应用实例 + MySQL + Redis + RabbitMQ** 的完整分布式环境：
+
+```bash
+docker compose up -d --build      # 首次会自动构建应用镜像（多阶段 Maven 构建）
+# 浏览器访问统一入口 http://localhost（Nginx 监听 80，负载均衡到 app1 / app2）
+```
+
+### 无状态化的三块基石
+
+| 关注点 | 单机实现 | 分布式实现 |
+| --- | --- | --- |
+| **登录态** | 内存 HttpSession | **Spring Session**：HttpSession 外置 Redis，实例间共享 |
+| **房间 / 对局状态** | JVM 内 `ConcurrentHashMap` | **Redis** 存储（`poker:room:{id}`）+ **Redisson 分布式锁**串行化并发 |
+| **WebSocket 广播** | 内存版 SimpleBroker（单机） | **RabbitMQ STOMP Broker Relay**：多实例连同一 broker，跨实例广播 |
+
+> **为什么用了 RabbitMQ relay 还需要 Nginx `ip_hash`？** 因为 **SockJS 的 HTTP 兜底传输是有会话的**——同一 SockJS 会话的多次 HTTP 请求必须落到同一实例；而 relay 解决的是**不同实例之间的消息广播**。两者解决不同层面的问题，缺一不可。
+
+### 架构拓扑
+
+```text
+                      ┌──────────────┐
+        浏览器  ───▶   │  Nginx :80   │  ip_hash 粘性 + /ws WebSocket 升级
+                      └──────┬───────┘
+                   ┌─────────┴─────────┐
+                   ▼                   ▼
+             ┌──────────┐        ┌──────────┐
+             │   app1   │        │   app2   │   ← 无状态，可任意扩容
+             └────┬─────┘        └────┬─────┘
+                  └────────┬──────────┘
+         ┌─────────────────┼──────────────────┐
+         ▼                 ▼                  ▼
+    ┌─────────┐      ┌────────────┐     ┌──────────────┐
+    │  MySQL  │      │   Redis    │     │   RabbitMQ   │
+    │  战绩   │      │ Session /  │     │ STOMP Relay  │
+    │  持久化 │      │ 房间 / 榜单│     │  跨实例广播  │
+    └─────────┘      └────────────┘     └──────────────┘
+```
+
+> 验证无状态：两名玩家被 Nginx 分发到**不同实例**，仍能进入同一房间、实时看到彼此的出牌与聊天 —— 证明登录态、房间状态、消息广播均已跨实例共享。
+
+---
+
 ## 📊 排行榜接口
 
 | 方法 | 路径 | 说明 |
@@ -164,7 +211,7 @@ mvnw.cmd spring-boot:run
 
 - **实时通信**：基于 `@EnableWebSocketMessageBroker` 搭建 STOMP/SockJS 通道，以 `/topic/rooms/{roomId}` 做**房间级发布-订阅**，实现发牌、出牌、过牌、聊天、状态同步的低延迟广播；SockJS 提供不支持原生 WebSocket 环境下的自动降级。
 - **游戏规则引擎**：从零实现牌组生成与洗牌发牌、出牌合法性校验（牌型 / 张数 / 压牌大小）、基于座位的循环轮转出牌、隐藏阵营自动划分，以及按出完顺序与阵营计算的多分支结算算法。
-- **并发控制**：使用 `ConcurrentHashMap` 管理房间，结合**每房间独立 `ReentrantLock`（`tryLock` 超时）**与 `ReentrantReadWriteLock` 保护玩家状态，规避多人并发操作下的竞态与数据不一致。
+- **分布式状态与并发控制**：房间 / 对局状态外置到 **Redis**（JSON 序列化），以 `executeWithLock` 模板统一「**Redisson 分布式锁** → 读 Redis → 修改 → 写回」，保证多实例下对同一房间操作的串行与一致；应用因此**无状态、可水平扩展**（旧版为单机 `ConcurrentHashMap` + `ReentrantReadWriteLock`）。
 - **Redis 排行榜**：用 **ZSet** 维护积分榜，结算时 `ZINCRBY` 增量更新（O(log N)），`ZREVRANGE` 取 TopN、`ZREVRANK` 查个人排名；Redis 仅作读加速，写入失败时**降级**不阻断主流程，并在**应用启动时从 DB 预热重建**，保证与持久层最终一致。
 - **断线重连**：通过独立的 recover 接口，在刷新 / 掉线后还原玩家手牌、当前轮次、上手牌与阵营等完整对局上下文，保障对局连续性。
 - **安全与认证**：集成 Spring Security 完成注册登录与会话管理（BCrypt 加密），并自定义 **WebSocket 握手拦截器**将 HTTP 会话身份同步至长连接；采用「广播发牌通知 + 玩家各自拉取手牌」的方式降低手牌泄露风险。
@@ -175,7 +222,7 @@ mvnw.cmd spring-boot:run
 ## 🗺️ 后续优化方向
 
 - [x] **Redis ZSet 排行榜** + Docker Compose 一键开发环境。
-- [ ] 接入 **RabbitMQ 作为 STOMP Broker Relay**，替换内存版 SimpleBroker，并将房间 / 对局状态外置到 Redis，支持多实例**水平扩展**。
+- [x] **RabbitMQ STOMP Broker Relay** 替换内存版 SimpleBroker；**Spring Session + 房间状态外置 Redis + Redisson 分布式锁**实现无状态化；**Nginx + 多实例**水平扩展（见下方「分布式部署」）。
 - [ ] 增加 **消息级鉴权**（`messageMatchers`）与接口层统一身份校验，收敛 WebSocket `allowedOrigin` 白名单。
 - [ ] 补充单元测试与集成测试，完善 CI/CD。
 - [ ] 增加对局回放、观战与匹配机制。
@@ -193,8 +240,9 @@ game
 │   ├── application.properties    # 应用配置
 │   └── log4j2.xml                # 日志配置
 ├── src/test                      # 测试
-├── docker/                       # MySQL 初始化 SQL、RabbitMQ 插件配置
-├── docker-compose.yml            # 一键拉起 MySQL / Redis / RabbitMQ
+├── docker/                       # MySQL 初始化 SQL、RabbitMQ 插件、Nginx 负载均衡配置
+├── Dockerfile                    # 应用镜像（多阶段 Maven 构建）
+├── docker-compose.yml            # 一键拉起 Nginx + 多实例 + MySQL / Redis / RabbitMQ
 ├── .env.example                  # 环境变量样例
 ├── pom.xml                       # Maven 依赖与构建
 └── mvnw / mvnw.cmd               # Maven Wrapper

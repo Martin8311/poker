@@ -46,8 +46,81 @@ services:
       - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
       - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------- 应用实例 1 ----------
+  app1:
+    build: .
+    image: poker-app:latest
+    container_name: poker-app1
+    environment:
+      DB_HOST: mysql
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-poker_root_pwd}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      WS_RELAY_ENABLED: "true"
+      AVATAR_UPLOAD_PATH: /app/icon
+    volumes:
+      - avatar-data:/app/icon
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  # ---------- 应用实例 2（复用实例 1 构建的镜像，共享 MySQL / Redis / RabbitMQ）----------
+  app2:
+    image: poker-app:latest
+    container_name: poker-app2
+    environment:
+      DB_HOST: mysql
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-poker_root_pwd}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      WS_RELAY_ENABLED: "true"
+      AVATAR_UPLOAD_PATH: /app/icon
+    volumes:
+      - avatar-data:/app/icon
+    depends_on:
+      app1:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  # ---------- Nginx 负载均衡（统一入口 http://localhost）----------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: poker-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app1
+      - app2
 
 volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
+  avatar-data:
