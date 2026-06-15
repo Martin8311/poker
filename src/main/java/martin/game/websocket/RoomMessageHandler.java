@@ -34,10 +34,10 @@ public class RoomMessageHandler {
     /**
      * 玩家加入房间后，通知所有玩家更新列表
      * 客户端发送消息到 /app/rooms/{roomId}/join
-     * 服务器广播到 /topic/rooms/{roomId}
+     * 服务器广播到 /topic/rooms.{roomId}
      */
     @MessageMapping("/rooms/{roomId}/join")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameMessage handlePlayerJoin(@DestinationVariable String roomId,
                                    GameMessage gameMessage,
                                    Authentication authentication) throws Exception {
@@ -73,7 +73,7 @@ public class RoomMessageHandler {
      * 玩家离开房间后，通知所有玩家更新列表
      */
     @MessageMapping("/rooms/{roomId}/leave")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameMessage handlePlayerLeave(@DestinationVariable String roomId,
                                          GameMessage gameMessage
                                          ) throws Exception {
@@ -114,7 +114,7 @@ public class RoomMessageHandler {
     }
 
     @MessageMapping("/rooms/{roomId}/getInfo")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameMessage handlePlayerGetInfo(@DestinationVariable String roomId,
                                          GameMessage gameMessage,
                                          Authentication authentication) throws Exception {

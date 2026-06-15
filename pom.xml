@@ -97,6 +97,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
         </dependency>
+
+        <!-- STOMP Broker Relay：连接外部 RabbitMQ(STOMP) 所需的 TCP 客户端 -->
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

@@ -44,6 +44,7 @@ services:
       - "61613:61613"   # STOMP（供 WebSocket Broker Relay 使用）
     volumes:
       - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - rabbitmq-data:/var/lib/rabbitmq
 
 volumes:

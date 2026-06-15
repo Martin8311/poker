@@ -185,7 +185,7 @@ async function initWebSocket(){
         // 连接成功的回调（核心：所有操作放这里）
         async function(frame) {
             // 1. 订阅房间主题（必须在连接成功后）
-            stompClient.subscribe(`/topic/rooms/${roomId}`, function(message) {
+            stompClient.subscribe(`/topic/rooms.${roomId}`, function(message) {
                 handleRoomMessage(JSON.parse(message.body));
             });
 

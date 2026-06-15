@@ -13,10 +13,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private BaseInterceptor baseInterceptor;
 
-    @Value("${avatar.upload.path}")
+    @Value("${avatar.upload.path:./uploads/avatar/}")
     private String avatarUploadPath; // 外部存储路径：D:/avatar/icon/
 
-    @Value("${avatar.access.prefix}")
+    @Value("${avatar.access.prefix:/avatar/}")
     private String avatarAccessPrefix; // 前端访问前缀：/avatar/
 
     @Override

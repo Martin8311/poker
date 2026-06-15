@@ -157,7 +157,7 @@ public class RoomController {
 
     // 处理玩家准备请求:
     @MessageMapping("/room/{roomId}/isReady")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameMessage handleIsReady(@DestinationVariable String roomId, GameMessage message){
         roomService.handleReadyEvent(roomId, message.isReady());
         return message;

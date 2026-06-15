@@ -347,6 +347,67 @@ async function check_reconnect(){
     }
 }
 
+/**
+ * 加载并渲染排行榜（TopN + 我的排名）
+ * 均为 GET 请求，同源 fetch 自动携带登录 cookie，无需 CSRF
+ */
+async function loadLeaderboard() {
+    try {
+        const [topRes, meRes] = await Promise.all([
+            fetch('/leaderboard/top?n=10'),
+            fetch('/leaderboard/me')
+        ]);
+
+        if (!topRes.ok) {
+            throw new Error('排行榜加载失败');
+        }
+
+        const top = await topRes.json();
+        const me = meRes.ok ? await meRes.json() : null;
+        renderLeaderboard(top, me);
+    } catch (error) {
+        console.error('加载排行榜失败:', error);
+        showToast('排行榜加载失败，请稍后重试');
+    }
+}
+
+// 排行榜模态框控制
+document.addEventListener('DOMContentLoaded', function () {
+    const leaderboardBtn = document.getElementById('leaderboardBtn');
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    const refreshBtn = document.getElementById('refreshLeaderboardBtn');
+    const closeButtons = document.querySelectorAll('.close-leaderboard');
+
+    if (!leaderboardBtn || !leaderboardModal) {
+        return;
+    }
+
+    // 打开：显示模态框并加载数据
+    leaderboardBtn.addEventListener('click', function () {
+        leaderboardModal.style.display = 'flex';
+        loadLeaderboard();
+    });
+
+    // 关闭按钮
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', function () {
+            leaderboardModal.style.display = 'none';
+        });
+    });
+
+    // 点击模态框外部关闭
+    window.addEventListener('click', function (event) {
+        if (event.target === leaderboardModal) {
+            leaderboardModal.style.display = 'none';
+        }
+    });
+
+    // 刷新
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadLeaderboard);
+    }
+});
+
 
 
 

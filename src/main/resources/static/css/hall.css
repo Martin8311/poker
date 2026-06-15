@@ -283,4 +283,85 @@ header {
     color: #6c757d;
 }
 
+/* ===== 排行榜 ===== */
+.leaderboard-modal-content {
+    max-width: 460px;
+}
+
+.leaderboard-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.lb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+}
+
+.lb-rank {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    color: #555;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.lb-top1 .lb-rank { background-color: #FFD700; color: #7a5c00; }
+.lb-top2 .lb-rank { background-color: #C0C0C0; color: #4d4d4d; }
+.lb-top3 .lb-rank { background-color: #CD7F32; color: #fff; }
+
+.lb-avatar {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #e0e0e0;
+}
+
+.lb-name {
+    flex: 1 1 auto;
+    font-weight: 500;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lb-score {
+    flex: 0 0 auto;
+    font-weight: 600;
+    color: #007bff;
+}
+
+.lb-empty {
+    text-align: center;
+    color: #888;
+    padding: 30px 0;
+}
+
+.leaderboard-me {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    text-align: center;
+    color: #555;
+    font-size: 14px;
+}
+
+.leaderboard-me strong {
+    color: #007bff;
+}
+
 

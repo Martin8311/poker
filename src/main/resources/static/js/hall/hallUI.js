@@ -210,3 +210,61 @@ function createPasswordForm(roomId, button){
         }
     });
 }
+
+/**
+ * 渲染排行榜
+ * @param {Array} entries - 排行榜条目 [{rank, username, nickname, iconUrl, score}]
+ * @param {Object} me - 当前用户排行信息（rank=-1 表示未上榜），可为 null
+ */
+function renderLeaderboard(entries, me) {
+    const list = document.getElementById('leaderboardList');
+    const meBox = document.getElementById('leaderboardMe');
+    list.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+        list.innerHTML = '<li class="lb-empty">暂无排行数据，快去赢一局吧！</li>';
+    } else {
+        entries.forEach(entry => {
+            const li = document.createElement('li');
+            li.className = 'lb-item' + (entry.rank <= 3 ? ' lb-top' + entry.rank : '');
+
+            // 名次徽章
+            const rankEl = document.createElement('span');
+            rankEl.className = 'lb-rank';
+            rankEl.textContent = entry.rank;
+
+            // 头像（缺省 / 加载失败回退到默认头像）
+            const avatarEl = document.createElement('img');
+            avatarEl.className = 'lb-avatar';
+            avatarEl.src = entry.iconUrl || '/icon/default-avatar.jpg';
+            avatarEl.alt = '';
+            avatarEl.onerror = function () { this.src = '/icon/default-avatar.jpg'; };
+
+            // 昵称（textContent 赋值，防 XSS）
+            const nameEl = document.createElement('span');
+            nameEl.className = 'lb-name';
+            nameEl.textContent = entry.nickname;
+
+            // 积分
+            const scoreEl = document.createElement('span');
+            scoreEl.className = 'lb-score';
+            scoreEl.textContent = entry.score;
+
+            li.appendChild(rankEl);
+            li.appendChild(avatarEl);
+            li.appendChild(nameEl);
+            li.appendChild(scoreEl);
+            list.appendChild(li);
+        });
+    }
+
+    if (me) {
+        if (me.rank === -1) {
+            meBox.textContent = `你还未上榜（当前积分 ${me.score}），先赢一局吧！`;
+        } else {
+            meBox.innerHTML = `我的排名：<strong>#${me.rank}</strong> · 积分 <strong>${me.score}</strong>`;
+        }
+    } else {
+        meBox.innerHTML = '';
+    }
+}

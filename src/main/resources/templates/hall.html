@@ -123,11 +123,34 @@
         </div>
     </div>
 
+    <!-- 排行榜模态框 -->
+    <div id="leaderboardModal" class="modal">
+        <div class="modal-content leaderboard-modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-trophy"></i> 积分排行榜</h3>
+                <button type="button" class="modal-close close-leaderboard">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ol id="leaderboardList" class="leaderboard-list"></ol>
+                <div id="leaderboardMe" class="leaderboard-me"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="refreshLeaderboardBtn" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> 刷新
+                </button>
+                <button type="button" class="btn btn-primary close-leaderboard">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <main>
         <!-- 创建房间区域 -->
         <div class="room-actions">
             <button id="createRoomBtn" class="btn btn-success">
                 <i class="fas fa-plus-circle"></i> 创建新房间
+            </button>
+            <button id="leaderboardBtn" class="btn btn-primary">
+                <i class="fas fa-trophy"></i> 排行榜
             </button>
             <div id="loadingIndicator" style="display: none; margin-left: 15px; color: #666; vertical-align: middle;">
                 <i class="fas fa-spinner fa-spin"></i> 创建中...

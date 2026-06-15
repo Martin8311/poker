@@ -45,7 +45,7 @@ public class GameWebSocketController {
      * 处理房间内的聊天消息
      */
     @MessageMapping("/rooms/{roomId}/message")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameMessage handleRoomMessage(
             @DestinationVariable String roomId,
             GameMessage message,
@@ -65,7 +65,7 @@ public class GameWebSocketController {
      * 处理游戏开始(由房主开始)
      */
     @MessageMapping("/rooms/{roomId}/start")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameAction handleGameStart(
             @DestinationVariable String roomId,
             GameAction action,
@@ -97,7 +97,7 @@ public class GameWebSocketController {
      * 处理发牌逻辑
      */
     @MessageMapping("/rooms/{roomId}/allocate")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameAction handleGameAllocate(
             @DestinationVariable String roomId,
             GameAction action,
@@ -154,7 +154,7 @@ public class GameWebSocketController {
      *  指定轮次
      */
     @MessageMapping("/rooms/{roomId}/turn")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameTurn(@DestinationVariable String roomId,
                                     GameRound round,
                                     Authentication authentication){
@@ -176,7 +176,7 @@ public class GameWebSocketController {
      *  处理出牌
      */
     @MessageMapping("/rooms/{roomId}/process-actor")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameActor(@DestinationVariable String roomId,
                                      GameRound round,
                                      Authentication authentication){
@@ -217,7 +217,7 @@ public class GameWebSocketController {
      * PASS
      */
     @MessageMapping("/rooms/{roomId}/pass")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGamePass(@DestinationVariable String roomId, GameRound round){
         Room room = roomService.getRoom(roomId);
 
@@ -245,7 +245,7 @@ public class GameWebSocketController {
      * 接受玩家手牌出空请求
      */
     @MessageMapping("/rooms/{roomId}/hand-empty")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameHandEmptyRequest(@DestinationVariable String roomId, GameRound round){
 
         Room room = roomService.getRoom(roomId);
@@ -304,7 +304,7 @@ public class GameWebSocketController {
      * restart 重新对局
      */
     @MessageMapping("/rooms/{roomId}/restart")
-    @SendTo("/topic/rooms/{roomId}")
+    @SendTo("/topic/rooms.{roomId}")
     public GameRound handleGameRestart(@DestinationVariable String roomId, @RequestBody GameRound round){
         Map<String, List<Card>> playerCards = gameService.getRoomCards(roomId);
         GameUtils.sortPlayerCards(playerCards);
