@@ -1,10 +1,10 @@
 package martin.game.config;
 
-import martin.game.interceptor.WebSocketUserInterceptor;
+import martin.game.interceptor.AuthChannelInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -26,13 +26,33 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${app.websocket.relay.pass:guest}")
     private String relayPass;
 
+    // 允许的跨域来源（CORS），默认 * 便于本地多端口联调，生产应收敛为具体域名
+    @Value("${app.websocket.allowed-origins:*}")
+    private String[] allowedOrigins;
+
+    // 入站消息鉴权拦截器（消息级鉴权）
+    private final AuthChannelInterceptor authChannelInterceptor;
+
+    public WebSocketConfig(AuthChannelInterceptor authChannelInterceptor) {
+        this.authChannelInterceptor = authChannelInterceptor;
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 注册 WebSocket 端点（SockJS 兜底），握手时同步 HTTP 会话用户身份
         registry.addEndpoint("/ws")
                 .addInterceptors(new HttpSessionHandshakeInterceptor())
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
+    }
+
+    /**
+     * 注册入站消息拦截器，对每条 STOMP 消息做消息级鉴权
+     * （未认证拒绝；订阅房间话题校验成员资格）。
+     */
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(authChannelInterceptor);
     }
 
     @Override

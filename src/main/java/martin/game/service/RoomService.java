@@ -83,6 +83,22 @@ public class RoomService {
     }
 
     /**
+     * 校验用户是否为指定房间的成员（只读，用于 WebSocket 订阅鉴权）
+     */
+    public boolean isUserInRoom(String roomId, String username) {
+        Room room = roomRepository.findById(roomId);
+        if (room == null) {
+            return false;
+        }
+        for (User u : room.getPlayers()) {
+            if (u.getUsername().equals(username)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 移除房间（当最后一个玩家离开时）
      */
     public void removeRoom(String roomId) {

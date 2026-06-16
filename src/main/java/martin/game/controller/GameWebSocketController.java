@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
@@ -38,6 +39,19 @@ public class GameWebSocketController {
     private GameService gameService;
 
     private static final Logger logger = LogManager.getLogger(GameWebSocketController.class);
+
+    /**
+     * 消息级鉴权：校验「认证身份」与消息体中声称的操作者一致，
+     * 防止伪造他人身份进行游戏操作（替身出牌 / 冒充等）。
+     */
+    private void assertSelf(Authentication authentication, String claimedUsername) {
+        if (authentication == null || claimedUsername == null
+                || !authentication.getName().equals(claimedUsername)) {
+            logger.warn("身份校验失败：认证用户={}, 声称用户={}",
+                    authentication == null ? "null" : authentication.getName(), claimedUsername);
+            throw new AccessDeniedException("禁止以他人身份进行游戏操作");
+        }
+    }
 
     /**
      * 处理房间内的聊天消息
@@ -98,7 +112,8 @@ public class GameWebSocketController {
             Authentication authentication) {
 
         Room room = roomService.getRoom(roomId);
-        if (!action.getUsername().equals(room.getCreator().getUsername())) {
+        // 只有房主能发牌；以认证身份校验，不信任消息体中的 username
+        if (!authentication.getName().equals(room.getCreator().getUsername())) {
             action.setType("UN_KNOWN");
             return action;
         }
@@ -111,7 +126,9 @@ public class GameWebSocketController {
     }
 
     @PostMapping("/rooms/{roomId}/get_card")
-    public ResponseEntity<List<Card>> handleGameGetCard(@PathVariable String roomId, @RequestBody String username) {
+    public ResponseEntity<List<Card>> handleGameGetCard(@PathVariable String roomId, Authentication authentication) {
+        // 用认证身份取牌，只能拿到自己的手牌（防止传他人用户名偷牌）
+        String username = authentication.getName();
         Room room = roomService.getRoom(roomId);
         List<Card> cards = room.getPlayersCards().get(username);
         return ResponseEntity.ok(cards);
@@ -149,6 +166,8 @@ public class GameWebSocketController {
                                      GameRound round,
                                      Authentication authentication) {
 
+        assertSelf(authentication, round.getCurrentTurnPlayer());
+
         roomService.executeWithLock(roomId, room -> {
             room.setLastCards(round.getPlayerCards());
             room.setLastActorUsername(round.getCurrentTurnPlayer());
@@ -166,7 +185,9 @@ public class GameWebSocketController {
     }
 
     @PostMapping("/rooms/{roomId}/actor")
-    public ResponseEntity<String> handleGameActor(@PathVariable String roomId, @RequestBody GameRound round) {
+    public ResponseEntity<String> handleGameActorCheck(@PathVariable String roomId, @RequestBody GameRound round,
+                                                       Authentication authentication) {
+        assertSelf(authentication, round.getCurrentTurnPlayer());
         List<Card> cards = round.getPlayerCards();
 
         String result = roomService.executeWithLock(roomId, room -> {
@@ -185,7 +206,9 @@ public class GameWebSocketController {
      */
     @MessageMapping("/rooms/{roomId}/pass")
     @SendTo("/topic/rooms.{roomId}")
-    public GameRound handleGamePass(@DestinationVariable String roomId, GameRound round) {
+    public GameRound handleGamePass(@DestinationVariable String roomId, GameRound round,
+                                    Authentication authentication) {
+        assertSelf(authentication, round.getCurrentTurnPlayer());
         roomService.executeWithLock(roomId, room -> {
             round.setType("PASS");
 
@@ -213,7 +236,9 @@ public class GameWebSocketController {
      */
     @MessageMapping("/rooms/{roomId}/hand-empty")
     @SendTo("/topic/rooms.{roomId}")
-    public GameRound handleGameHandEmptyRequest(@DestinationVariable String roomId, GameRound round) {
+    public GameRound handleGameHandEmptyRequest(@DestinationVariable String roomId, GameRound round,
+                                                Authentication authentication) {
+        assertSelf(authentication, round.getCurrentTurnPlayer());
         roomService.executeWithLock(roomId, room -> {
             String username = round.getCurrentTurnPlayer();
 
@@ -282,7 +307,9 @@ public class GameWebSocketController {
      */
     @PostMapping("/rooms/{roomId}/recover")
     @ResponseBody
-    public GameRound handleGameRecover(@PathVariable String roomId, @RequestBody String username) {
+    public GameRound handleGameRecover(@PathVariable String roomId, Authentication authentication) {
+        // 用认证身份恢复，只能恢复自己的手牌与对局上下文
+        String username = authentication.getName();
         Room room = roomService.getRoom(roomId);
         GameRound round = new GameRound();
         round.setType("RECOVER");
