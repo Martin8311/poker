@@ -1,9 +1,11 @@
 package martin.game.repository;
 
 import martin.game.model.Room;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,13 +27,22 @@ public class RoomRepository {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
+    /** 房间 key 的 TTL（秒）。每次 save 设置、定时续租刷新；无人续租则随 TTL 过期回收 */
+    @Value("${app.room.ttl-seconds:90}")
+    private long ttlSeconds;
+
     public RoomRepository(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
     public void save(Room room) {
-        redisTemplate.opsForValue().set(ROOM_KEY_PREFIX + room.getRoomId(), room);
+        redisTemplate.opsForValue().set(ROOM_KEY_PREFIX + room.getRoomId(), room, Duration.ofSeconds(ttlSeconds));
         redisTemplate.opsForSet().add(ROOM_INDEX, room.getRoomId());
+    }
+
+    /** 续租：刷新房间 key 的 TTL（由 RoomLivenessTracker 对仍有在线会话的房间定时调用） */
+    public void touch(String roomId) {
+        redisTemplate.expire(ROOM_KEY_PREFIX + roomId, Duration.ofSeconds(ttlSeconds));
     }
 
     public Room findById(String roomId) {
@@ -48,13 +59,18 @@ public class RoomRepository {
         return Boolean.TRUE.equals(redisTemplate.hasKey(ROOM_KEY_PREFIX + roomId));
     }
 
-    /** 所有房间 ID（供重连扫描等） */
+    /** 所有房间 ID（供重连扫描等）。顺带自愈：清理 key 已被 TTL 回收、但索引仍残留的 id */
     public Set<String> allRoomIds() {
         Set<Object> ids = redisTemplate.opsForSet().members(ROOM_INDEX);
         Set<String> result = new HashSet<>();
         if (ids != null) {
             for (Object id : ids) {
-                result.add(String.valueOf(id));
+                String roomId = String.valueOf(id);
+                if (Boolean.TRUE.equals(redisTemplate.hasKey(ROOM_KEY_PREFIX + roomId))) {
+                    result.add(roomId);
+                } else {
+                    redisTemplate.opsForSet().remove(ROOM_INDEX, roomId);
+                }
             }
         }
         return result;
