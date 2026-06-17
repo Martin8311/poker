@@ -40,7 +40,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/druid/**").permitAll() // permitAll 定义了可以匿名访问的资源
+                // 放行 actuator 监控端点供 Prometheus 抓取；生产环境应改为仅内网/独立端口可访问
+                .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/druid/**", "/actuator/**").permitAll() // permitAll 定义了可以匿名访问的资源
                 .anyRequest().authenticated() // 除了上述路径外，所有其他请求都需要登录认证（未登录会被拦截到登录页）。
 
         )

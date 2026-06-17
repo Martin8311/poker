@@ -119,8 +119,38 @@ services:
       - app1
       - app2
 
+  # ---------- Prometheus：抓取并存储各实例指标（http://localhost:9090）----------
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: poker-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - app1
+      - app2
+
+  # ---------- Grafana：可视化仪表盘（http://localhost:3000，默认 admin/admin）----------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: poker-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
   avatar-data:
+  prometheus-data:
+  grafana-data:
