@@ -194,6 +194,11 @@ async function initWebSocket(){
                 if (window.FriendsUI) FriendsUI.onNotification(JSON.parse(message.body));
             });
 
+            // 私信实时推送
+            stompClient.subscribe('/user/queue/dm', function(message) {
+                if (window.FriendsUI) FriendsUI.onDm(JSON.parse(message.body));
+            });
+
             // 2. 获取当前用户的信息
             await stompClient.send("/app/rooms/" + roomId + "/getInfo", {}, JSON.stringify({
                 type: 'GET_INFO',

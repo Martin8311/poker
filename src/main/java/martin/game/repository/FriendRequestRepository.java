@@ -25,4 +25,9 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, Lo
     @Query("select f from FriendRequest f where f.status = martin.game.model.FriendRequestStatus.ACCEPTED " +
             "and (f.requester = :u or f.addressee = :u)")
     List<FriendRequest> findAcceptedInvolving(@Param("u") String username);
+
+    /** a、b 是否已是好友（双向已通过） */
+    @Query("select count(f) > 0 from FriendRequest f where f.status = martin.game.model.FriendRequestStatus.ACCEPTED " +
+            "and ((f.requester = :a and f.addressee = :b) or (f.requester = :b and f.addressee = :a))")
+    boolean areFriends(@Param("a") String a, @Param("b") String b);
 }
