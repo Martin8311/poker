@@ -1,5 +1,11 @@
 let cropper;
 
+// 文本转义，防止房间简介 / 昵称中的特殊字符破坏页面或 XSS
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // 提示消息功能
 function showToast(message) {
     const toast = document.createElement('div');
@@ -87,18 +93,25 @@ function updateRoomUI(rooms) {
     // 有房间时，动态生成房间卡片
     rooms.forEach(room => {
         const roomCard = document.createElement('div');
-        const roomTypeText = room.publicRoom ? '公开' : '非公开';
         roomCard.className = 'room-card';
+        const isPublic = room.publicRoom;
+        const count = room.players.length;
+        const full = count >= 5;
         roomCard.innerHTML = `
-            <h3>房间 ID: <span>${room.roomId}</span></h3>
-            <p>房主: <span>${room.creator.nickname}</span></p>
-            <p>信息: <span ></span>${room.info}</p>
-            <p>当前人数: <span>${room.players.length}</span>/5</p>
-            <p>房间类型: <span>${roomTypeText}</span></p>
-            
-            <button class="btn btn-primary join-room-btn" data-room-id="${room.roomId}" data-room-password="${room.publicRoom}">
-                <i class="fas fa-door-open"></i> 加入房间
-            </button>
+            <div class="room-card-top">
+                <div class="room-card-title"><i class="fas fa-table"></i> ${esc(room.info) || '快乐房间'}</div>
+                <span class="room-tag ${isPublic ? 'public' : 'private'}">${isPublic ? '公开' : '私密'}</span>
+            </div>
+            <div class="room-card-body">
+                <div class="room-meta"><i class="fas fa-crown"></i> 房主&nbsp;<b>${esc(room.creator.nickname)}</b></div>
+                <div class="room-meta"><i class="fas fa-hashtag"></i> <span class="room-id">${esc(room.roomId)}</span></div>
+            </div>
+            <div class="room-card-foot">
+                <span class="room-players"><i class="fas fa-users"></i> ${count}/5</span>
+                <button class="btn btn-primary join-room-btn" data-room-id="${esc(room.roomId)}" data-room-password="${isPublic}" ${full ? 'disabled' : ''}>
+                    <i class="fas fa-door-open"></i> ${full ? '已满' : '加入'}
+                </button>
+            </div>
         `;
         container.appendChild(roomCard);
     });
