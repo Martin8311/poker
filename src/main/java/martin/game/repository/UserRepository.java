@@ -18,6 +18,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // 批量按用户名查询（排行榜补全昵称 / 头像，避免 N 次查询）
     List<User> findByUsernameIn(Collection<String> usernames);
 
+    // 按昵称模糊搜索好友（忽略大小写）
+    List<User> findByNicknameContainingIgnoreCase(String nickname);
+
     boolean existsByUsername(String username);
     // boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);

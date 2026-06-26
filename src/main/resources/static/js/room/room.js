@@ -189,6 +189,11 @@ async function initWebSocket(){
                 handleRoomMessage(JSON.parse(message.body));
             });
 
+            // 好友申请实时通知（复用本连接，订阅用户私有队列）
+            stompClient.subscribe('/user/queue/friend', function(message) {
+                if (window.FriendsUI) FriendsUI.onNotification(JSON.parse(message.body));
+            });
+
             // 2. 获取当前用户的信息
             await stompClient.send("/app/rooms/" + roomId + "/getInfo", {}, JSON.stringify({
                 type: 'GET_INFO',

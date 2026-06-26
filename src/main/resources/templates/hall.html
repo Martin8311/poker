@@ -9,6 +9,7 @@
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
 
     <link rel="stylesheet" th:href="@{/css/hall.css}">
+    <link rel="stylesheet" th:href="@{/css/friends.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 </head>
@@ -152,6 +153,9 @@
             <button id="leaderboardBtn" class="btn btn-primary">
                 <i class="fas fa-trophy"></i> 排行榜
             </button>
+            <button id="friendsBtn" class="btn btn-primary">
+                <i class="fas fa-user-friends"></i> 好友
+            </button>
             <div id="loadingIndicator" style="display: none; margin-left: 15px; color: #666; vertical-align: middle;">
                 <i class="fas fa-spinner fa-spin"></i> 创建中...
             </div>
@@ -187,6 +191,15 @@
 <script th:src="@{/js/hall/utils.js}"></script>
 <script th:src="@{/js/hall/hallUI.js}"></script>
 <script th:src="@{/js/hall/hall.js}"></script>
+<!-- 好友功能：SockJS/Stomp 库 + 共享核心，并自建一条连接接收好友通知 -->
+<script th:src="@{/js/room/sockjs.min.js}"></script>
+<script th:src="@{/js/room/stomp.min.js}"></script>
+<script th:src="@{/js/friends.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.FriendsUI) FriendsUI.connectStandalone();
+    });
+</script>
 <script th:inline="javascript">
     const username = [[${username}]];  // 双中括号会自动转义为字符串
     const iconUrl = [[${iconUrl}]];

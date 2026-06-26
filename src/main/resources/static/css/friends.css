@@ -1,0 +1,287 @@
+/* 好友功能样式（大厅 / 房间共享）。fixed 定位 + 高 z-index，避免被各页面样式影响 */
+
+.friends-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.friends-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.friends-panel {
+    position: relative;
+    width: 380px;
+    max-width: 92vw;
+    max-height: 80vh;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.friends-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #4a6cf7;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.friends-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.friends-tabs {
+    display: flex;
+    border-bottom: 1px solid #eee;
+}
+
+.friends-tab {
+    flex: 1;
+    padding: 12px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    position: relative;
+}
+
+.friends-tab.active {
+    color: #4a6cf7;
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 #4a6cf7;
+}
+
+.friends-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 5px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+}
+
+.friends-body {
+    padding: 14px;
+    overflow-y: auto;
+}
+
+.friends-search-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.friends-search-bar input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.friends-search-bar button {
+    padding: 8px 16px;
+    background: #4a6cf7;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.friends-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 60px;
+}
+
+.friends-empty {
+    text-align: center;
+    color: #999;
+    padding: 24px 0;
+    font-size: 14px;
+}
+
+.friend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+}
+
+.friend-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #eee;
+    display: block;
+}
+
+/* 在线/离线圆点（叠在头像右下角） */
+.friend-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+}
+
+.friend-dot.online {
+    background: #2ecc71;
+}
+
+.friend-dot.offline {
+    background: #bbb;
+}
+
+.friend-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.friend-nick {
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-sub {
+    font-size: 12px;
+    color: #999;
+}
+
+.friend-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.friend-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #fff;
+}
+
+.friend-btn.add,
+.friend-btn.ok {
+    background: #4a6cf7;
+}
+
+.friend-btn.del {
+    background: #e74c3c;
+}
+
+.friend-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.friend-tag {
+    font-size: 13px;
+    color: #999;
+    padding: 6px 4px;
+}
+
+/* 加好友按钮：挂在房间座位上 */
+.seat-add-friend-btn {
+    margin-top: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    background: #4a6cf7;
+    color: #fff;
+    cursor: pointer;
+}
+
+.seat-add-friend-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* 触发按钮上的未读角标 */
+.friends-btn-badge {
+    display: inline-block;
+    min-width: 16px;
+    height: 16px;
+    margin-left: 4px;
+    padding: 0 4px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 16px;
+    vertical-align: top;
+}
+
+/* toast 通知 */
+.friend-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+    padding: 12px 16px;
+    background: #333;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateX(120%);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+}
+
+.friend-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.friend-toast img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}

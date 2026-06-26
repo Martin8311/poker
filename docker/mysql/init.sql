@@ -14,3 +14,16 @@ CREATE TABLE IF NOT EXISTS `user` (
   `score`       INT          DEFAULT 0,
   `iconUrl`     VARCHAR(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 好友申请 / 好友关系：PENDING=申请中，ACCEPTED=好友（双向匹配，拒绝则删除记录）
+CREATE TABLE IF NOT EXISTS `friend_request` (
+  `id`          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `requester`   VARCHAR(45)  NOT NULL,
+  `addressee`   VARCHAR(45)  NOT NULL,
+  `status`      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+  `create_time` DATETIME     NOT NULL,
+  `update_time` DATETIME     DEFAULT NULL,
+  UNIQUE KEY `uk_pair` (`requester`, `addressee`),
+  KEY `idx_addressee_status` (`addressee`, `status`),
+  KEY `idx_requester_status` (`requester`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

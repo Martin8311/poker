@@ -68,7 +68,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     .setClientLogin(relayUser)
                     .setClientPasscode(relayPass)
                     .setSystemLogin(relayUser)
-                    .setSystemPasscode(relayPass);
+                    .setSystemPasscode(relayPass)
+                    // 用户级目的地（convertAndSendToUser -> /user/queue/...）跨实例广播：
+                    // 申请者与接收者可能连在不同实例，靠这两个 broker 话题同步用户会话注册与未解析的用户消息
+                    .setUserRegistryBroadcast("/topic/poker.user-registry")
+                    .setUserDestinationBroadcast("/topic/poker.user-dest");
         } else {
             // 默认：内存版 SimpleBroker（单机，开发无需外部 MQ）
             config.enableSimpleBroker("/topic");
