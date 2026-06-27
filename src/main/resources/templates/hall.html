@@ -11,6 +11,8 @@
     <link rel="stylesheet" th:href="@{/css/hall.css}">
     <link rel="stylesheet" th:href="@{/css/friends.css}">
     <link rel="stylesheet" th:href="@{/css/signin.css}">
+    <link rel="stylesheet" th:href="@{/css/recharge.css}">
+    <link rel="stylesheet" th:href="@{/css/role-chip.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 </head>
@@ -20,9 +22,27 @@
     <header>
         <h1>纸牌游戏大厅</h1>
         <div class="user-info">
-            <span>欢迎，<span th:text="${nickname}" id="nickname">玩家</span>！</span>
+            <span>欢迎，<span th:text="${nickname}" id="nickname">玩家</span>
+                <!-- 角色徽章（仅 VIP/SVIP/ADMIN 显示） -->
+                <span th:switch="${role}" style="margin-left:6px;">
+                    <span th:case="'VIP'"   class="role-chip role-vip">VIP</span>
+                    <span th:case="'SVIP'"  class="role-chip role-svip">SVIP</span>
+                    <span th:case="'ADMIN'" class="role-chip role-admin">ADMIN</span>
+                </span>
+            ！</span>
 
             <img th:src="${iconUrl}" id="hall-player-icon" class="hall-player-icon" alt="当前头像">
+
+            <!-- 仅 ADMIN 可见：管理后台入口 -->
+            <a th:if="${role == 'ADMIN'}" href="/admin" class="btn btn-primary edit-btn">
+                <i class="fas fa-shield-alt"></i> 管理后台
+            </a>
+
+            <!-- 充值入口（顶部按钮：开通 VIP / 续费 / 管理员禁用） -->
+            <button id="rechargeBtn" class="btn btn-primary edit-btn">
+                <i class="fas fa-gem"></i>
+                <span id="rechargeBtnText">开通 VIP</span>
+            </button>
 
             <!-- 签到入口（自动红点提示） -->
             <span class="signin-btn-wrap">
@@ -209,6 +229,83 @@
         </div>
     </div>
 
+    <!-- 充值模态框 -->
+    <div id="rechargeModal" class="modal">
+        <div class="modal-content recharge-modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-gem"></i>
+                    <span id="rechargeModalTitle">开通 VIP / SVIP</span>
+                </h3>
+                <button type="button" class="modal-close recharge-modal-close">&times;</button>
+            </div>
+            <div class="recharge-modal-body">
+                <!-- 当前状态条（Step 1 + Step 2 都用） -->
+                <div id="rechargeCurrent" class="recharge-current">加载中...</div>
+
+                <!-- ===== Step 1: 选档 ===== -->
+                <div id="rechargeStep1" class="recharge-step">
+                    <div id="rechargePlanList" class="recharge-plans"></div>
+                    <div class="recharge-modal-foot">
+                        <button type="button" class="btn recharge-modal-close">关闭</button>
+                    </div>
+                </div>
+
+                <!-- ===== Step 2: 订单确认 ===== -->
+                <div id="rechargeStep2" class="recharge-step" style="display:none;">
+                    <!-- 订单详情 -->
+                    <div class="recharge-order-detail">
+                        <div class="recharge-order-row">
+                            <span class="recharge-order-label">档位</span>
+                            <span class="recharge-order-value" id="rechargeOrderPlan">--</span>
+                        </div>
+                        <div class="recharge-order-row">
+                            <span class="recharge-order-label">金额</span>
+                            <span class="recharge-order-value recharge-order-price" id="rechargeOrderAmount">--</span>
+                        </div>
+                        <div class="recharge-order-row">
+                            <span class="recharge-order-label">订单号</span>
+                            <span class="recharge-order-value recharge-order-mono" id="rechargeOrderNo">--</span>
+                        </div>
+                        <div class="recharge-order-row">
+                            <span class="recharge-order-label">过期时间</span>
+                            <span class="recharge-order-value" id="rechargeOrderExpire">--</span>
+                        </div>
+                    </div>
+
+                    <!-- 支付方式 -->
+                    <div class="recharge-section-title" style="margin-top:14px;">支付方式</div>
+                    <div class="recharge-pay-methods">
+                        <label class="recharge-pay-method selected" data-method="MOCK">
+                            <i class="fas fa-flask"></i>
+                            <span>模拟支付（开发模式）</span>
+                        </label>
+                        <label class="recharge-pay-method disabled" data-method="ALIPAY">
+                            <i class="fab fa-alipay"></i>
+                            <span>支付宝（需配置 AppID）</span>
+                        </label>
+                    </div>
+
+                    <!-- 支付状态 / 倒计时 -->
+                    <div id="rechargePayStatus" class="recharge-pay-status" style="display:none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span id="rechargePayStatusText">支付处理中...</span>
+                        <span class="recharge-countdown" id="rechargeCountdown"></span>
+                    </div>
+
+                    <div class="recharge-modal-foot">
+                        <button type="button" class="btn btn-secondary" id="rechargeBackBtn">
+                            <i class="fas fa-arrow-left"></i> 返回
+                        </button>
+                        <button type="button" class="btn btn-primary" id="rechargeConfirmPayBtn">
+                            确认支付
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <main>
         <!-- 创建房间区域 -->
         <div class="room-actions">
@@ -257,6 +354,7 @@
 <script th:src="@{/js/hall/hallUI.js}"></script>
 <script th:src="@{/js/hall/hall.js}"></script>
 <script th:src="@{/js/hall/signin.js}"></script>
+<script th:src="@{/js/hall/recharge.js}"></script>
 <!-- 好友功能：SockJS/Stomp 库 + 共享核心，并自建一条连接接收好友通知 -->
 <script th:src="@{/js/room/sockjs.min.js}"></script>
 <script th:src="@{/js/room/stomp.min.js}"></script>

@@ -16,4 +16,6 @@ public class LeaderboardEntry {
     private String nickname;  // 昵称
     private String iconUrl;   // 头像 URL
     private long score;       // 累计积分
+    /** 有效角色名（PLAYER/VIP/SVIP/ADMIN），用于前端徽章 */
+    private String role;
 }

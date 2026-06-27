@@ -82,12 +82,14 @@ public class LeaderboardService implements ApplicationRunner {
             String username = t.getValue();
             double score = t.getScore() == null ? 0 : t.getScore();
             User u = userMap.get(username);
+            String role = u != null ? u.getEffectiveRole().name() : martin.game.model.Role.PLAYER.name();
             result.add(new LeaderboardEntry(
                     rank++,
                     username,
                     u != null ? u.getNickname() : username,
-                    u != null ? u.getIconUrl() : null,
-                    (long) score
+                    avatarUrl(u),
+                    (long) score,
+                    role
             ));
         }
         return result;
@@ -101,12 +103,14 @@ public class LeaderboardService implements ApplicationRunner {
         Double score = redis.opsForZSet().score(LEADERBOARD_KEY, username);
 
         User u = userRepository.findByUsername(username).orElse(null);
+        String role = u != null ? u.getEffectiveRole().name() : martin.game.model.Role.PLAYER.name();
         return new LeaderboardEntry(
                 rank == null ? -1 : rank + 1,
                 username,
                 u != null ? u.getNickname() : username,
-                u != null ? u.getIconUrl() : null,
-                score == null ? 0L : score.longValue()
+                avatarUrl(u),
+                score == null ? 0L : score.longValue(),
+                role
         );
     }
 
@@ -145,5 +149,17 @@ public class LeaderboardService implements ApplicationRunner {
         } catch (Exception e) {
             logger.warn("排行榜预热失败（Redis 可能未就绪）: {}", e.getMessage());
         }
+    }
+
+    private String avatarUrl(User user) {
+        if (user == null || user.getIconUrl() == null || user.getIconUrl().isBlank()) {
+            return "/icon/default-avatar.jpg";
+        }
+        String iconUrl = user.getIconUrl().trim();
+        if (iconUrl.startsWith("http://") || iconUrl.startsWith("https://")
+                || iconUrl.startsWith("/") || iconUrl.startsWith("data:")) {
+            return iconUrl;
+        }
+        return "/avatar/" + iconUrl;
     }
 }

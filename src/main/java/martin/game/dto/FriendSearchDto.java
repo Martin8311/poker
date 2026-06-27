@@ -18,4 +18,6 @@ public class FriendSearchDto {
     private String relation;
     /** 当 relation=REQUEST_RECEIVED 时带上申请 id，前端可直接同意；否则为 null */
     private Long requestId;
+    /** 有效角色名（PLAYER/VIP/SVIP/ADMIN） */
+    private String role;
 }

@@ -48,6 +48,8 @@ public class HallController {
         model.addAttribute("nickname", currentUser.getNickname());
         model.addAttribute("username", currentUser.getUsername());
         model.addAttribute("iconUrl", (currentUser.getIconUrl() != null) ? "/avatar/" + currentUser.getIconUrl() : "/icon/default-avatar.jpg");
+        // 角色权限：注入有效角色给 Thymeleaf 条件渲染
+        model.addAttribute("role", currentUser.getEffectiveRole().name());
 
         // 后续添加房间列表数据
         model.addAttribute("rooms", roomService.getAvailableRooms());

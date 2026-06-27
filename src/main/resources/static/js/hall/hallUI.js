@@ -249,7 +249,7 @@ function renderLeaderboard(entries, me) {
             // 头像（缺省 / 加载失败回退到默认头像）
             const avatarEl = document.createElement('img');
             avatarEl.className = 'lb-avatar';
-            avatarEl.src = entry.iconUrl || '/icon/default-avatar.jpg';
+            avatarEl.src = normalizeAvatarUrl(entry.iconUrl);
             avatarEl.alt = '';
             avatarEl.onerror = function () { this.src = '/icon/default-avatar.jpg'; };
 
@@ -257,6 +257,15 @@ function renderLeaderboard(entries, me) {
             const nameEl = document.createElement('span');
             nameEl.className = 'lb-name';
             nameEl.textContent = entry.nickname;
+
+            // 角色徽章（VIP/SVIP/ADMIN 才显示）
+            if (entry.role && entry.role !== 'PLAYER') {
+                const chip = document.createElement('span');
+                chip.className = 'role-chip role-' + String(entry.role).toLowerCase();
+                chip.textContent = entry.role;
+                chip.style.marginLeft = '6px';
+                nameEl.appendChild(chip);
+            }
 
             // 积分
             const scoreEl = document.createElement('span');
@@ -280,4 +289,13 @@ function renderLeaderboard(entries, me) {
     } else {
         meBox.innerHTML = '';
     }
+}
+
+function normalizeAvatarUrl(iconUrl) {
+    const value = String(iconUrl == null ? '' : iconUrl).trim();
+    if (!value) return '/icon/default-avatar.jpg';
+    if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
+        return value;
+    }
+    return '/avatar/' + value;
 }

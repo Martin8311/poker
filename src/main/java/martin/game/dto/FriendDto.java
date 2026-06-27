@@ -15,4 +15,6 @@ public class FriendDto {
     private String nickname;
     private String iconUrl;
     private boolean online;
+    /** 有效角色名（PLAYER/VIP/SVIP/ADMIN） */
+    private String role;
 }

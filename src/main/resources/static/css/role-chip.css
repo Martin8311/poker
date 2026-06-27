@@ -1,0 +1,36 @@
+/* ===================== 角色徽章 ===================== */
+.role-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    line-height: 1.4;
+    border: 1px solid transparent;
+}
+
+.role-chip.role-player {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.role-chip.role-vip {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fbbf24;
+}
+
+.role-chip.role-svip {
+    background: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
+    color: #6d28d9;
+    border-color: #c084fc;
+}
+
+.role-chip.role-admin {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #f87171;
+}

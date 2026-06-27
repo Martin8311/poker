@@ -141,7 +141,7 @@ public class RoomController {
     @ResponseBody
     public UserInfo getUserInfoByUsername(@PathVariable String roomId, @RequestBody String username){
         User user = userService.findByUsername(username);
-        UserInfo userInfo = new UserInfo(user.getNickname(), user.getScore(), user.getTotalGames(), user.getWinGames(), user.getIconUrl());
+        UserInfo userInfo = new UserInfo(user.getNickname(), user.getScore(), user.getTotalGames(), user.getWinGames(), user.getIconUrl(), user.getEffectiveRole().name());
         return userInfo;
     }
 

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -15,6 +16,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
     private final UserService userService;
     private static final Logger logger = LogManager.getLogger(SecurityConfig.class);
@@ -41,7 +43,12 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
                 // 放行 actuator 监控端点供 Prometheus 抓取；生产环境应改为仅内网/独立端口可访问
-                .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/druid/**", "/actuator/**").permitAll() // permitAll 定义了可以匿名访问的资源
+                // 静态资源全量 permitAll，避免 <img> / WebSocket 握手 401
+                .requestMatchers("/", "/login", "/register",
+                                 "/css/**", "/js/**", "/icon/**", "/avatar/**", "/poker/**", "/sound/**",
+                                 "/druid/**", "/actuator/**").permitAll()
+                // 管理后台：仅 ADMIN 可访问
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated() // 除了上述路径外，所有其他请求都需要登录认证（未登录会被拦截到登录页）。
 
         )

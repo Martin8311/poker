@@ -16,13 +16,16 @@ public class UserInfo {
     private Integer win_game;
     private String win_rate;
     private String iconUrl;
+    /** 有效角色名（PLAYER/VIP/SVIP/ADMIN），用于前端徽章 */
+    private String role;
 
-    public UserInfo(String nickName, Integer score, Integer total_game, Integer win_game, String iconUrl){
+    public UserInfo(String nickName, Integer score, Integer total_game, Integer win_game, String iconUrl, String role){
         this.nickName = nickName;
         this.total_game = total_game;
         this.score = score;
         this.win_game = win_game;
         this.iconUrl = iconUrl;
+        this.role = role;
         win_rate = calculateWinRate();
     }
 

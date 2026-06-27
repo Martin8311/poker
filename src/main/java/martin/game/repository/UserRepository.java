@@ -1,6 +1,7 @@
 package martin.game.repository;
 
 import jakarta.persistence.LockModeType;
+import martin.game.model.Role;
 import martin.game.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -40,4 +42,21 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Query("UPDATE User p SET p.iconUrl = :iconUrl WHERE p.username = :username")
     int updateIconUrlByUsername(@Param("username") String username, @Param("iconUrl") String iconUrl);
 
+    // ----- 角色权限 -----
+
+    /** 按角色查询（后台 / 统计用） */
+    List<User> findByRole(Role role);
+
+    /** 按角色统计数量（占位后台用） */
+    long countByRole(Role role);
+
+    /**
+     * 更新角色 + 过期时间。
+     * VIP/SVIP 应传非空 expireAt；PLAYER/ADMIN 传 null 即可。
+     */
+    @Modifying
+    @Query("UPDATE User p SET p.role = :role, p.vipExpireAt = :vipExpireAt WHERE p.username = :username")
+    int updateRoleAndVipExpireByUsername(@Param("username") String username,
+                                          @Param("role") Role role,
+                                          @Param("vipExpireAt") LocalDateTime vipExpireAt);
 }

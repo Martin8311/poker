@@ -446,6 +446,14 @@
                 client.subscribe('/user/queue/dm', function (msg) {
                     try { onDm(JSON.parse(msg.body)); } catch (e) {}
                 });
+                // 充值状态推送
+                client.subscribe('/user/queue/recharge', function (msg) {
+                    try {
+                        if (typeof window.RechargeNotifyHandler === 'function') {
+                            window.RechargeNotifyHandler(msg);
+                        }
+                    } catch (e) {}
+                });
             }, function (err) {
                 console.warn('好友通知连接失败，将重试', err);
                 setTimeout(connectStandalone, 10000);

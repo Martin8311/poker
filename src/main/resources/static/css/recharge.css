@@ -1,0 +1,308 @@
+/* ===================== 充值弹窗样式 ===================== */
+:root {
+    --recharge-vip:    #fbbf24;
+    --recharge-svip:   #c084fc;
+    --recharge-line:   #e2e8f0;
+}
+
+.recharge-modal-content {
+    max-width: 560px;
+    width: 92%;
+    padding: 0;
+}
+
+.recharge-modal-body {
+    padding: 20px 24px 24px;
+}
+
+/* 当前状态条 */
+.recharge-current {
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.recharge-current strong {
+    color: #4a6cf7;
+    font-weight: 700;
+}
+
+.recharge-current.expired {
+    background: #f8fafc;
+    border-color: var(--recharge-line);
+}
+
+.recharge-current.expired strong {
+    color: #64748b;
+}
+
+/* 角色分组标题 */
+.recharge-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    margin: 16px 0 8px;
+    text-transform: uppercase;
+}
+
+.recharge-section-title.svip {
+    color: var(--recharge-svip);
+}
+
+/* 档位卡片 */
+.recharge-plans {
+    display: grid;
+    gap: 8px;
+}
+
+.recharge-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border: 1px solid var(--recharge-line);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s, background 0.15s;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    color: #1f2937;
+}
+
+.recharge-card:hover:not(:disabled) {
+    background: #fff;
+    border-color: var(--recharge-vip);
+    transform: translateY(-1px);
+}
+
+.recharge-card.svip:hover:not(:disabled) {
+    border-color: var(--recharge-svip);
+}
+
+.recharge-card.recommended {
+    border-color: var(--recharge-vip);
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    position: relative;
+}
+
+.recharge-card.svip.recommended {
+    border-color: var(--recharge-svip);
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
+.recharge-card .recharge-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.recharge-card .recharge-card-label {
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.recharge-card .recharge-card-tag {
+    display: inline-block;
+    background: var(--recharge-vip);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.recharge-card.svip .recharge-card-tag {
+    background: var(--recharge-svip);
+}
+
+.recharge-card .recharge-card-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.recharge-card .recharge-card-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4a6cf7;
+    white-space: nowrap;
+}
+
+.recharge-card.svip .recharge-card-price {
+    color: #7c3aed;
+}
+
+.recharge-card:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 弹窗底部 */
+.recharge-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.recharge-modal-foot .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f1f5f9;
+    color: #475569;
+    transition: background 0.15s;
+}
+
+.recharge-modal-foot .btn:hover {
+    background: #e2e8f0;
+}
+
+@media (max-width: 480px) {
+    .recharge-card {
+        padding: 10px 12px;
+    }
+    .recharge-card .recharge-card-price {
+        font-size: 16px;
+    }
+}
+
+/* ===================== Step 2: 订单确认 ===================== */
+.recharge-step {
+    /* step1/step2 切换用 display 控制 */
+}
+
+/* 订单详情 */
+.recharge-order-detail {
+    background: #f8fafc;
+    border: 1px solid var(--recharge-line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 12px;
+}
+
+.recharge-order-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+}
+
+.recharge-order-row + .recharge-order-row {
+    border-top: 1px dashed #e2e8f0;
+}
+
+.recharge-order-label {
+    color: #64748b;
+}
+
+.recharge-order-value {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.recharge-order-price {
+    color: #4a6cf7;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.recharge-order-mono {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: #475569;
+    word-break: break-all;
+}
+
+/* 支付方式 */
+.recharge-pay-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.recharge-pay-method {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid var(--recharge-line);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 14px;
+    color: #334155;
+}
+
+.recharge-pay-method:hover:not(.disabled) {
+    background: #fff;
+    border-color: var(--recharge-vip);
+}
+
+.recharge-pay-method.selected {
+    background: #fffbeb;
+    border-color: var(--recharge-vip);
+    color: #b45309;
+    font-weight: 600;
+}
+
+.recharge-pay-method.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #f1f5f9;
+}
+
+.recharge-pay-method i {
+    font-size: 18px;
+    width: 22px;
+    text-align: center;
+}
+
+/* 支付中状态 */
+.recharge-pay-status {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    color: #4338ca;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.recharge-pay-status.error {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.recharge-pay-status.success {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+
+.recharge-countdown {
+    margin-left: auto;
+    font-size: 12px;
+    color: #64748b;
+}

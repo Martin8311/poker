@@ -76,7 +76,8 @@ public class FriendService {
                 .map(u -> {
                     String rel = relationOf.getOrDefault(u.getUsername(), REL_NONE);
                     return new FriendSearchDto(u.getUsername(), u.getNickname(), avatarUrl(u),
-                            rel, receivedRequestId.get(u.getUsername()));
+                            rel, receivedRequestId.get(u.getUsername()),
+                            u.getEffectiveRole().name());
                 })
                 .collect(Collectors.toList());
     }
@@ -189,7 +190,8 @@ public class FriendService {
         return others.stream().distinct().map(name -> {
             User u = users.get(name);
             return new FriendDto(name, u != null ? u.getNickname() : name,
-                    u != null ? avatarUrl(u) : null, online.contains(name));
+                    u != null ? avatarUrl(u) : null, online.contains(name),
+                    u != null ? u.getEffectiveRole().name() : martin.game.model.Role.PLAYER.name());
         }).collect(Collectors.toList());
     }
 

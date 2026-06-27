@@ -3,16 +3,19 @@ CREATE DATABASE IF NOT EXISTS poker DEFAULT CHARACTER SET utf8mb4;
 USE poker;
 
 CREATE TABLE IF NOT EXISTS `user` (
-  `id`          INT AUTO_INCREMENT PRIMARY KEY,
-  `username`    VARCHAR(45)  NOT NULL UNIQUE,
-  `password`    VARCHAR(200) NOT NULL,
-  `nickname`    VARCHAR(45)  NOT NULL,
-  `email`       VARCHAR(45)  DEFAULT NULL,
-  `create_time` DATETIME     DEFAULT NULL,
-  `total_games` INT          DEFAULT 0,
-  `win_games`   INT          DEFAULT 0,
-  `score`       INT          DEFAULT 0,
-  `iconUrl`     VARCHAR(255) DEFAULT NULL
+  `id`            INT AUTO_INCREMENT PRIMARY KEY,
+  `username`      VARCHAR(45)  NOT NULL UNIQUE,
+  `password`      VARCHAR(200) NOT NULL,
+  `nickname`      VARCHAR(45)  NOT NULL,
+  `email`         VARCHAR(45)  DEFAULT NULL,
+  `create_time`   DATETIME     DEFAULT NULL,
+  `total_games`   INT          DEFAULT 0,
+  `win_games`     INT          DEFAULT 0,
+  `score`         INT          DEFAULT 0,
+  `iconUrl`       VARCHAR(255) DEFAULT NULL,
+  `role`          VARCHAR(16)  NOT NULL DEFAULT 'PLAYER',
+  `vip_expire_at` DATETIME     DEFAULT NULL,
+  KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 好友申请 / 好友关系：PENDING=申请中，ACCEPTED=好友（双向匹配，拒绝则删除记录）
@@ -50,4 +53,26 @@ CREATE TABLE IF NOT EXISTS `check_in_record` (
   `create_time`       DATETIME    NOT NULL,
   UNIQUE KEY `uk_user_date` (`username`, `check_in_date`),
   KEY `idx_user_date` (`username`, `check_in_date` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 充值订单：每次开通一条记录
+-- 状态机：CREATED / PENDING_PAYMENT / PAID / FAILED / EXPIRED / CANCELLED
+CREATE TABLE IF NOT EXISTS `recharge_order` (
+  `id`             BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `username`       VARCHAR(45)  NOT NULL,
+  `order_no`       VARCHAR(64)  DEFAULT NULL,
+  `plan_id`        VARCHAR(32)  NOT NULL,
+  `role`           VARCHAR(16)  NOT NULL,
+  `days`           INT          NOT NULL,
+  `price_fen`      BIGINT       NOT NULL,
+  `status`         VARCHAR(16)  NOT NULL DEFAULT 'CREATED',
+  `payment_method` VARCHAR(16)  DEFAULT NULL,
+  `payment_no`     VARCHAR(64)  DEFAULT NULL,
+  `paid_at`        DATETIME     DEFAULT NULL,
+  `expired_at`     DATETIME     DEFAULT NULL,
+  `create_time`    DATETIME     NOT NULL,
+  UNIQUE KEY `uk_order_no` (`order_no`),
+  KEY `idx_user_time` (`username`, `create_time`),
+  KEY `idx_plan`      (`plan_id`),
+  KEY `idx_status_expired` (`status`, `expired_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

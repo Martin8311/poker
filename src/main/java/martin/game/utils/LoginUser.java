@@ -1,12 +1,21 @@
 package martin.game.utils;
 
+import martin.game.model.Role;
 import martin.game.model.User;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.List;
 
 public class LoginUser implements UserDetails {
+
+    /**
+     * 显式 serialVersionUID：与 {@link martin.game.model.User} 同样的考量，
+     * 防止 Spring Session（JDK 序列化）中缓存的 SecurityContext 反序列化失败。
+     */
+    private static final long serialVersionUID = 1L;
 
     // 存储数据库中的用户实体（假设你的用户实体类是 User）
     private final User user;
@@ -21,10 +30,15 @@ public class LoginUser implements UserDetails {
         return user.getId(); // 假设 User 实体有 getId() 方法，返回 Long 类型的 ID
     }
 
+    /**
+     * 角色权限集合。Spring Security 6 的 {@code DaoAuthenticationProvider}
+     * 会从此处读权限并放入 {@code Authentication#getAuthorities()}。
+     * 角色名以 {@code ROLE_} 前缀暴露，匹配 {@code hasRole("ADMIN")} / {@code hasAuthority("ROLE_VIP")}。
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 返回用户权限（根据实际业务实现，这里简化为返回空集合）
-        return null;
+        Role effective = user.getEffectiveRole();
+        return List.of(new SimpleGrantedAuthority(effective.asAuthority()));
     }
 
     @Override

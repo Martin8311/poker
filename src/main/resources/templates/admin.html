@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>管理后台</title>
+
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+
+    <link rel="stylesheet" th:href="@{/css/hall.css}">
+    <link rel="stylesheet" th:href="@{/css/role-chip.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="admin-container">
+
+    <header class="admin-header">
+        <div class="admin-header-left">
+            <h1><i class="fas fa-shield-alt"></i> 管理后台</h1>
+            <span class="admin-subtitle">占位版（未来实现用户管理）</span>
+        </div>
+        <div class="admin-header-right">
+            <span>欢迎，<b th:text="${me.nickname}">Admin</b></span>
+            <span th:switch="${meRole}">
+                <span th:case="'ADMIN'" class="role-chip role-admin">ADMIN</span>
+            </span>
+            <a href="/hall" class="btn btn-secondary">
+                <i class="fas fa-home"></i> 返回大厅
+            </a>
+            <a href="/logout" class="btn btn-danger">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </a>
+        </div>
+    </header>
+
+    <!-- 统计卡片 -->
+    <section class="admin-stats">
+        <div class="admin-stat">
+            <div class="admin-stat-icon" style="background:#eef2ff;color:#4a6cf7;">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <div class="admin-stat-value" th:text="${summary.totalUsers}">0</div>
+                <div class="admin-stat-label">用户总数</div>
+            </div>
+        </div>
+        <div class="admin-stat">
+            <div class="admin-stat-icon" style="background:#fee2e2;color:#b91c1c;">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div>
+                <div class="admin-stat-value" th:text="${summary.adminCount}">0</div>
+                <div class="admin-stat-label">管理员数</div>
+            </div>
+        </div>
+        <div class="admin-stat">
+            <div class="admin-stat-icon" style="background:#fef3c7;color:#b45309;">
+                <i class="fas fa-crown"></i>
+            </div>
+            <div>
+                <div class="admin-stat-value" th:text="${summary.vipCount}">0</div>
+                <div class="admin-stat-label">VIP 总数</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 用户列表（仅展示，编辑功能留到未来） -->
+    <section class="admin-section">
+        <div class="admin-section-head">
+            <h2><i class="fas fa-list"></i> 用户管理</h2>
+            <span class="admin-section-hint">占位：仅展示用户列表，编辑 / 提权 / 封号功能未来实现</span>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>昵称</th>
+                    <th>角色</th>
+                    <th>积分</th>
+                    <th>总场数</th>
+                    <th>胜场</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="u : ${users}">
+                    <td>
+                        <img th:src="${u.iconUrl != null ? '/avatar/' + u.iconUrl : '/icon/default-avatar.jpg'}"
+                             class="admin-avatar" alt="">
+                        <span th:text="${u.username}">name</span>
+                    </td>
+                    <td th:text="${u.nickname}">nick</td>
+                    <td>
+                        <span th:switch="${u.getEffectiveRole().name()}">
+                            <span th:case="'PLAYER'" class="role-chip role-player" style="background:#f1f5f9;color:#64748b;">PLAYER</span>
+                            <span th:case="'VIP'"    class="role-chip role-vip">VIP</span>
+                            <span th:case="'SVIP'"   class="role-chip role-svip">SVIP</span>
+                            <span th:case="'ADMIN'"  class="role-chip role-admin">ADMIN</span>
+                        </span>
+                    </td>
+                    <td th:text="${u.score}">0</td>
+                    <td th:text="${u.totalGames}">0</td>
+                    <td th:text="${u.winGames}">0</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+</div>
+
+</body>
+</html>
