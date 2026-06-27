@@ -39,3 +39,15 @@ CREATE TABLE IF NOT EXISTS `private_message` (
   KEY `idx_pair_time` (`sender`, `receiver`, `create_time`),
   KEY `idx_unread` (`receiver`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 签到记录：每日每用户唯一（uk_user_date 兜底防重复）
+-- MySQL 为主存（权威），Redis Bitmap 仅作读加速镜像
+CREATE TABLE IF NOT EXISTS `check_in_record` (
+  `id`                BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `username`          VARCHAR(45) NOT NULL,
+  `check_in_date`     DATE        NOT NULL,
+  `consecutive_days`  INT         NOT NULL,
+  `create_time`       DATETIME    NOT NULL,
+  UNIQUE KEY `uk_user_date` (`username`, `check_in_date`),
+  KEY `idx_user_date` (`username`, `check_in_date` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -10,6 +10,7 @@
 
     <link rel="stylesheet" th:href="@{/css/hall.css}">
     <link rel="stylesheet" th:href="@{/css/friends.css}">
+    <link rel="stylesheet" th:href="@{/css/signin.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 </head>
@@ -22,6 +23,15 @@
             <span>欢迎，<span th:text="${nickname}" id="nickname">玩家</span>！</span>
 
             <img th:src="${iconUrl}" id="hall-player-icon" class="hall-player-icon" alt="当前头像">
+
+            <!-- 签到入口（自动红点提示） -->
+            <span class="signin-btn-wrap">
+                <button id="signinBtn" class="btn btn-primary edit-btn">
+                    <i class="fas fa-calendar-check"></i>
+                    <span id="signinBtnText">查看签到</span>
+                </button>
+                <span id="signinDot" class="signin-dot" hidden></span>
+            </span>
 
             <!-- 编辑资料按钮 -->
             <button id="editProfileBtn" class="btn btn-primary edit-btn">
@@ -144,6 +154,61 @@
         </div>
     </div>
 
+    <!-- 签到模态框 -->
+    <div id="signinModal" class="modal">
+        <div class="modal-content signin-modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-calendar-check"></i> 每日签到</h3>
+                <button type="button" class="modal-close signin-modal-close">&times;</button>
+            </div>
+            <div class="signin-modal-body">
+                <!-- 顶部统计条 -->
+                <div class="signin-stats">
+                    <div class="signin-stat">
+                        <span class="signin-stat-value" id="signinMonthDays">0</span>
+                        <span class="signin-stat-label">本月已签</span>
+                    </div>
+                    <div class="signin-stat">
+                        <span class="signin-stat-value" id="signinConsecutive">0</span>
+                        <span class="signin-stat-label">连续天数</span>
+                    </div>
+                    <div class="signin-stat">
+                        <span class="signin-stat-value" id="signinTotal">0</span>
+                        <span class="signin-stat-label">累计签到</span>
+                    </div>
+                    <div class="signin-stat">
+                        <span class="signin-stat-value" id="signinLongest">0</span>
+                        <span class="signin-stat-label">最长连续</span>
+                    </div>
+                </div>
+
+                <!-- 月份导航 -->
+                <div class="signin-month-nav">
+                    <button id="signinPrevMonth" type="button" title="上个月">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h3 id="signinMonthTitle">--</h3>
+                    <button id="signinNextMonth" type="button" title="下个月">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- 日历 -->
+                <div id="signinCalendar" class="signin-calendar"></div>
+
+                <!-- 操作按钮 -->
+                <div class="signin-modal-foot">
+                    <button id="signinDoBtn" class="btn btn-primary" type="button">
+                        立即签到
+                    </button>
+                    <button type="button" class="btn btn-secondary signin-modal-close">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <main>
         <!-- 创建房间区域 -->
         <div class="room-actions">
@@ -191,6 +256,7 @@
 <script th:src="@{/js/hall/utils.js}"></script>
 <script th:src="@{/js/hall/hallUI.js}"></script>
 <script th:src="@{/js/hall/hall.js}"></script>
+<script th:src="@{/js/hall/signin.js}"></script>
 <!-- 好友功能：SockJS/Stomp 库 + 共享核心，并自建一条连接接收好友通知 -->
 <script th:src="@{/js/room/sockjs.min.js}"></script>
 <script th:src="@{/js/room/stomp.min.js}"></script>
