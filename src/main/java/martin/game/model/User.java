@@ -55,6 +55,12 @@ public class User implements UserDetails {
     @Column(name="iconUrl")
     private String iconUrl = null;
 
+    @Column(name="phone_number", unique = true, length = 20)
+    private String phoneNumber = null;
+
+    @Column(name="phone_bound_at")
+    private LocalDateTime phoneBoundAt = null;
+
     @Enumerated(EnumType.STRING)
     @Column(name="role", nullable = false, length = 16)
     private Role role = Role.PLAYER;

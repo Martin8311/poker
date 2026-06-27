@@ -135,8 +135,301 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    initPhoneBinding();
+
 
 });
+
+function initPhoneBinding() {
+    const panel = document.getElementById('phoneBindPanel');
+    const showBtn = document.getElementById('showPhoneBindBtn');
+    const phoneInput = document.getElementById('bindPhoneNumber');
+    const codeInput = document.getElementById('phoneVerifyCode');
+    const sendBtn = document.getElementById('sendPhoneCodeBtn');
+    const bindBtn = document.getElementById('bindPhoneBtn');
+    const hint = document.getElementById('phoneBindHint');
+    const boundText = document.getElementById('boundPhoneText');
+    const humanPrompt = document.getElementById('humanVerifyPrompt');
+    const humanContent = document.getElementById('humanVerifyContent');
+    const humanAnswer = document.getElementById('humanVerifyAnswer');
+    const humanHint = document.getElementById('humanVerifyHint');
+    const verifyHumanBtn = document.getElementById('verifyHumanBtn');
+    const refreshHumanBtn = document.getElementById('refreshHumanVerifyBtn');
+    let humanChallenge = null;
+    let humanToken = '';
+
+    if (!phoneInput || !codeInput || !sendBtn || !bindBtn) {
+        return;
+    }
+
+    if (showBtn && panel) {
+        showBtn.addEventListener('click', function () {
+            const opening = panel.hidden;
+            panel.hidden = !opening;
+            showBtn.textContent = opening ? '收起手机绑定' : getPhoneBindButtonText();
+            if (opening && !humanChallenge && !humanToken) {
+                loadHumanChallenge();
+            }
+        });
+    }
+
+    if (verifyHumanBtn) {
+        verifyHumanBtn.addEventListener('click', verifyHumanChallenge);
+    }
+    if (refreshHumanBtn) {
+        refreshHumanBtn.addEventListener('click', loadHumanChallenge);
+    }
+
+    sendBtn.addEventListener('click', async function () {
+        const phone = phoneInput.value.trim();
+        if (!isValidPhone(phone)) {
+            showToast('请输入有效的 11 位手机号');
+            phoneInput.focus();
+            return;
+        }
+        if (!humanToken) {
+            const verified = await verifyHumanChallenge();
+            if (!verified) {
+                return;
+            }
+        }
+
+        sendBtn.disabled = true;
+        try {
+            const data = await postForm('/user/phone/send-code', {
+                phoneNumber: phone,
+                humanToken: humanToken
+            });
+            if (!data.success) {
+                showToast(data.error || '验证码发送失败');
+                humanToken = '';
+                loadHumanChallenge();
+                sendBtn.disabled = false;
+                return;
+            }
+            humanToken = '';
+            const debugText = data.debugCode ? ` 开发验证码：${data.debugCode}` : '';
+            hint.textContent = `验证码已发送，${data.ttlMinutes || 5} 分钟内有效。${debugText}`;
+            if (humanHint) {
+                humanHint.textContent = '人机验证已使用，下次发送需重新验证。';
+            }
+            startPhoneCodeCountdown(sendBtn, Number(data.cooldownSeconds || 60));
+        } catch (error) {
+            console.error('发送手机验证码失败:', error);
+            showToast('验证码发送失败，请稍后重试');
+            humanToken = '';
+            loadHumanChallenge();
+            sendBtn.disabled = false;
+        }
+    });
+
+    bindBtn.addEventListener('click', async function () {
+        const phone = phoneInput.value.trim();
+        const code = codeInput.value.trim();
+        if (!isValidPhone(phone)) {
+            showToast('请输入有效的 11 位手机号');
+            phoneInput.focus();
+            return;
+        }
+        if (!/^\d{6}$/.test(code)) {
+            showToast('请输入 6 位数字验证码');
+            codeInput.focus();
+            return;
+        }
+
+        bindBtn.disabled = true;
+        try {
+            const data = await postForm('/user/phone/bind', {
+                phoneNumber: phone,
+                code: code
+            });
+            if (!data.success) {
+                showToast(data.error || '手机号绑定失败');
+                return;
+            }
+            boundText.textContent = data.phoneNumber || phone;
+            codeInput.value = '';
+            hint.textContent = '手机号绑定成功，可用于后续找回密码、修改密码等账号安全操作。';
+            humanToken = '';
+            humanChallenge = null;
+            if (panel) {
+                panel.hidden = true;
+            }
+            if (showBtn) {
+                showBtn.textContent = '更换手机号';
+            }
+            showToast(data.message || '手机号绑定成功');
+        } catch (error) {
+            console.error('绑定手机号失败:', error);
+            showToast('手机号绑定失败，请稍后重试');
+        } finally {
+            bindBtn.disabled = false;
+        }
+    });
+
+    async function loadHumanChallenge() {
+        if (!humanPrompt || !humanContent || !humanAnswer) {
+            return;
+        }
+        humanToken = '';
+        humanChallenge = null;
+        humanPrompt.textContent = '人机验证加载中...';
+        humanContent.innerHTML = '';
+        humanAnswer.value = '';
+        humanAnswer.disabled = false;
+        if (verifyHumanBtn) {
+            verifyHumanBtn.disabled = false;
+            verifyHumanBtn.textContent = '完成验证';
+        }
+        if (humanHint) {
+            humanHint.textContent = '发送手机验证码前需要先完成人机验证。';
+        }
+
+        try {
+            const data = await postForm('/user/human-verification/challenge', {});
+            if (!data.success || !data.challenge) {
+                throw new Error(data.error || '人机验证加载失败');
+            }
+            humanChallenge = data.challenge;
+            renderHumanChallenge(humanChallenge);
+        } catch (error) {
+            console.error('加载人机验证失败:', error);
+            humanPrompt.textContent = '人机验证加载失败';
+            if (humanHint) {
+                humanHint.textContent = '请点击“换一个”重试。';
+            }
+        }
+    }
+
+    function renderHumanChallenge(challenge) {
+        humanPrompt.textContent = challenge.prompt || '请完成人机验证';
+        humanContent.innerHTML = '';
+        humanAnswer.value = '';
+
+        if (challenge.type === 'SLIDER') {
+            const track = document.createElement('div');
+            track.className = 'human-slider-track';
+            track.style.width = `${challenge.trackWidth || 260}px`;
+
+            const target = document.createElement('span');
+            target.className = 'human-slider-target';
+            target.style.left = `${challenge.targetX || 0}px`;
+            track.appendChild(target);
+
+            const range = document.createElement('input');
+            range.type = 'range';
+            range.min = '0';
+            range.max = String(Math.max(1, (challenge.trackWidth || 260) - 36));
+            range.value = '0';
+            range.className = 'human-slider-range';
+            range.addEventListener('input', function () {
+                humanAnswer.value = range.value;
+            });
+
+            humanContent.appendChild(track);
+            humanContent.appendChild(range);
+            humanAnswer.value = '0';
+            humanAnswer.readOnly = true;
+            humanAnswer.placeholder = '拖动滑块完成验证';
+        } else {
+            const image = document.createElement('div');
+            image.className = 'human-image-code';
+            image.textContent = challenge.expression || '';
+            humanContent.appendChild(image);
+            humanAnswer.readOnly = false;
+            humanAnswer.placeholder = '请输入算式结果';
+            humanAnswer.focus();
+        }
+    }
+
+    async function verifyHumanChallenge() {
+        if (!humanChallenge) {
+            showToast('人机验证还未加载完成');
+            return false;
+        }
+        const answer = humanAnswer ? humanAnswer.value.trim() : '';
+        if (!answer) {
+            showToast('请先完成人机验证');
+            humanAnswer && humanAnswer.focus();
+            return false;
+        }
+
+        if (verifyHumanBtn) {
+            verifyHumanBtn.disabled = true;
+        }
+        try {
+            const data = await postForm('/user/human-verification/verify', {
+                challengeId: humanChallenge.challengeId,
+                answer: answer
+            });
+            if (!data.success) {
+                showToast(data.error || '人机验证失败');
+                loadHumanChallenge();
+                return false;
+            }
+            humanToken = data.humanToken || '';
+            if (humanHint) {
+                humanHint.textContent = '人机验证已通过，可以发送手机验证码。';
+            }
+            if (verifyHumanBtn) {
+                verifyHumanBtn.textContent = '已通过';
+                verifyHumanBtn.disabled = true;
+            }
+            if (humanAnswer) {
+                humanAnswer.disabled = true;
+            }
+            return true;
+        } catch (error) {
+            console.error('人机验证失败:', error);
+            showToast('人机验证失败，请稍后重试');
+            loadHumanChallenge();
+            return false;
+        } finally {
+            if (verifyHumanBtn && !humanToken) {
+                verifyHumanBtn.disabled = false;
+            }
+        }
+    }
+
+    function getPhoneBindButtonText() {
+        return boundText && boundText.textContent.trim() && boundText.textContent.trim() !== '未绑定'
+            ? '更换手机号'
+            : '绑定手机号';
+    }
+}
+
+function isValidPhone(phone) {
+    return /^1[3-9]\d{9}$/.test(phone);
+}
+
+async function postForm(url, values) {
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => formData.append(key, value));
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: formData
+    });
+    return response.json();
+}
+
+function startPhoneCodeCountdown(button, seconds) {
+    let left = Math.max(1, seconds || 60);
+    const originalText = '发送验证码';
+    button.textContent = `${left}s 后重试`;
+    const timer = setInterval(() => {
+        left -= 1;
+        if (left <= 0) {
+            clearInterval(timer);
+            button.disabled = false;
+            button.textContent = originalText;
+        } else {
+            button.textContent = `${left}s 后重试`;
+        }
+    }, 1000);
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. 获取DOM元素

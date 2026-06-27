@@ -342,6 +342,120 @@ header h1 {
     background: #e5e7eb;
 }
 
+.phone-bind-section {
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+}
+
+.phone-bind-current {
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.phone-bind-current strong {
+    color: var(--ink);
+}
+
+.phone-bind-toggle {
+    margin-top: 8px;
+}
+
+.phone-bind-panel {
+    margin-top: 12px;
+    padding-top: 2px;
+}
+
+.phone-bind-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.phone-bind-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.phone-bind-row .btn {
+    flex: 0 0 auto;
+}
+
+.human-verify-box {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8faff;
+}
+
+.human-verify-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.human-verify-refresh {
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 0;
+}
+
+.human-image-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 8px;
+    background:
+            linear-gradient(135deg, rgba(74, 108, 247, .16), rgba(139, 92, 246, .14)),
+            repeating-linear-gradient(45deg, transparent 0 8px, rgba(255, 255, 255, .45) 8px 12px);
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    user-select: none;
+}
+
+.human-slider-track {
+    position: relative;
+    height: 38px;
+    max-width: 100%;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #e8edff, #f4f6fb);
+    border: 1px solid #d8dce6;
+    overflow: hidden;
+}
+
+.human-slider-target {
+    position: absolute;
+    top: 6px;
+    width: 26px;
+    height: 26px;
+    border: 2px dashed var(--primary);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, .72);
+}
+
+.human-slider-range {
+    width: min(260px, 100%);
+    margin-top: 8px;
+}
+
+.human-verify-actions {
+    margin-top: 8px;
+}
+
 /* ---------- 房间密码弹窗（JS 动态创建） ---------- */
 .password-form-overlay {
     position: fixed;

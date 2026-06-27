@@ -48,6 +48,7 @@ public class HallController {
         model.addAttribute("nickname", currentUser.getNickname());
         model.addAttribute("username", currentUser.getUsername());
         model.addAttribute("iconUrl", (currentUser.getIconUrl() != null) ? "/avatar/" + currentUser.getIconUrl() : "/icon/default-avatar.jpg");
+        model.addAttribute("phoneNumber", currentUser.getPhoneNumber());
         // 角色权限：注入有效角色给 Thymeleaf 条件渲染
         model.addAttribute("role", currentUser.getEffectiveRole().name());
 

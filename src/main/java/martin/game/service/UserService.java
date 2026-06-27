@@ -90,6 +90,18 @@ public class UserService implements UserDetailsService {
         return affectedRows == 1;
     }
 
+    @Transactional
+    public boolean updatePhone(String username, String phoneNumber) {
+        int affectedRows = userRepository.updatePhoneByUsername(username, phoneNumber, LocalDateTime.now());
+        return affectedRows == 1;
+    }
+
+    public boolean isPhoneBoundToOtherUser(String username, String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber)
+                .map(user -> !user.getUsername().equals(username))
+                .orElse(false);
+    }
+
     // ============ 角色权限管理 ============
 
     /**

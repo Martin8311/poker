@@ -1,5 +1,6 @@
 package martin.game.config;
 
+import jakarta.servlet.DispatcherType;
 import martin.game.service.UserService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,11 +43,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
+                // 错误页/转发由容器内部触发，必须放行，否则原始异常处理过程中会被 Security 二次拦截
+                .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                 // 放行 actuator 监控端点供 Prometheus 抓取；生产环境应改为仅内网/独立端口可访问
                 // 静态资源全量 permitAll，避免 <img> / WebSocket 握手 401
                 .requestMatchers("/", "/login", "/register",
                                  "/css/**", "/js/**", "/icon/**", "/avatar/**", "/poker/**", "/sound/**",
-                                 "/druid/**", "/actuator/**").permitAll()
+                                 "/druid/**", "/actuator/**", "/error").permitAll()
                 // 管理后台：仅 ADMIN 可访问
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated() // 除了上述路径外，所有其他请求都需要登录认证（未登录会被拦截到登录页）。

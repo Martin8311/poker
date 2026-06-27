@@ -1,6 +1,8 @@
 package martin.game.controller;
 
 import martin.game.model.User;
+import martin.game.service.HumanVerificationService;
+import martin.game.service.PhoneVerificationService;
 import martin.game.service.UserService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,7 +31,44 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private PhoneVerificationService phoneVerificationService;
+
+    @Autowired
+    private HumanVerificationService humanVerificationService;
+
+    @Value("${app.phone-verification.debug-code:true}")
+    private boolean phoneVerificationDebugCode;
+
     private static final Logger logger = LogManager.getLogger(UserController.class);
+
+    @PostMapping("/user/human-verification/challenge")
+    @ResponseBody
+    public Map<String, Object> createHumanVerificationChallenge(Authentication authentication) {
+        HumanVerificationService.Challenge challenge =
+                humanVerificationService.createChallenge(authentication.getName());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("challenge", challenge);
+        return result;
+    }
+
+    @PostMapping("/user/human-verification/verify")
+    @ResponseBody
+    public Map<String, Object> verifyHumanVerification(Authentication authentication, String challengeId, String answer) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            HumanVerificationService.VerificationResult verification =
+                    humanVerificationService.verify(authentication.getName(), challengeId, answer);
+            result.put("success", true);
+            result.put("humanToken", verification.token());
+            result.put("ttlSeconds", verification.ttlSeconds());
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
 
     @PostMapping("/user/profile/update")
     @ResponseBody
@@ -89,6 +128,43 @@ public class UserController {
 
         result.put("success", true);
         result.put("message", "更新信息完成!");
+        return result;
+    }
+    @PostMapping("/user/phone/send-code")
+    @ResponseBody
+    public Map<String, Object> sendPhoneCode(Authentication authentication, String phoneNumber, String humanToken) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            humanVerificationService.consumePassedToken(authentication.getName(), humanToken);
+            PhoneVerificationService.SendCodeResult sendResult =
+                    phoneVerificationService.sendBindCode(authentication.getName(), phoneNumber);
+            result.put("success", true);
+            result.put("message", "验证码已发送");
+            result.put("ttlMinutes", sendResult.ttlMinutes());
+            result.put("cooldownSeconds", sendResult.cooldownSeconds());
+            if (phoneVerificationDebugCode) {
+                result.put("debugCode", sendResult.code());
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    @PostMapping("/user/phone/bind")
+    @ResponseBody
+    public Map<String, Object> bindPhone(Authentication authentication, String phoneNumber, String code) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            phoneVerificationService.bindPhone(authentication.getName(), phoneNumber, code);
+            result.put("success", true);
+            result.put("message", "手机号绑定成功");
+            result.put("phoneNumber", phoneNumber == null ? "" : phoneNumber.trim());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
         return result;
     }
 }

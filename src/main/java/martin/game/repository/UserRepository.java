@@ -17,6 +17,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByPhoneNumber(String phoneNumber);
+
     // 批量按用户名查询（排行榜补全昵称 / 头像，避免 N 次查询）
     List<User> findByUsernameIn(Collection<String> usernames);
 
@@ -41,6 +43,12 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @Modifying
     @Query("UPDATE User p SET p.iconUrl = :iconUrl WHERE p.username = :username")
     int updateIconUrlByUsername(@Param("username") String username, @Param("iconUrl") String iconUrl);
+
+    @Modifying
+    @Query("UPDATE User p SET p.phoneNumber = :phoneNumber, p.phoneBoundAt = :phoneBoundAt WHERE p.username = :username")
+    int updatePhoneByUsername(@Param("username") String username,
+                              @Param("phoneNumber") String phoneNumber,
+                              @Param("phoneBoundAt") LocalDateTime phoneBoundAt);
 
     // ----- 角色权限 -----
 

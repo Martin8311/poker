@@ -103,6 +103,55 @@
                     </div>
                 </div>
 
+                <div class="form-group phone-bind-section">
+                    <label>绑定手机：</label>
+                    <div class="phone-bind-current">
+                        当前绑定：
+                        <strong id="boundPhoneText"
+                                th:text="${phoneNumber == null || #strings.isEmpty(phoneNumber) ? '未绑定' : phoneNumber}">
+                            未绑定
+                        </strong>
+                    </div>
+                    <button type="button" class="btn btn-secondary phone-bind-toggle" id="showPhoneBindBtn"
+                            th:text="${phoneNumber == null || #strings.isEmpty(phoneNumber) ? '绑定手机号' : '更换手机号'}">
+                        绑定手机号
+                    </button>
+                    <div class="phone-bind-panel" id="phoneBindPanel" hidden>
+                        <div class="phone-bind-row">
+                            <input type="text" id="bindPhoneNumber" name="bindPhoneNumber"
+                                   th:value="${phoneNumber}" maxlength="11" placeholder="请输入 11 位手机号">
+                            <button type="button" class="btn btn-secondary" id="sendPhoneCodeBtn">
+                                发送验证码
+                            </button>
+                        </div>
+                        <div class="human-verify-box" id="humanVerifyBox">
+                            <div class="human-verify-head">
+                                <span id="humanVerifyPrompt">人机验证加载中...</span>
+                                <button type="button" class="human-verify-refresh" id="refreshHumanVerifyBtn">
+                                    换一个
+                                </button>
+                            </div>
+                            <div id="humanVerifyContent"></div>
+                            <div class="phone-bind-row human-verify-actions">
+                                <input type="text" id="humanVerifyAnswer" maxlength="8" placeholder="请输入答案">
+                                <button type="button" class="btn btn-secondary" id="verifyHumanBtn">
+                                    完成验证
+                                </button>
+                            </div>
+                            <p class="hint" id="humanVerifyHint">发送手机验证码前需要先完成人机验证。</p>
+                        </div>
+                        <div class="phone-bind-row">
+                            <input type="text" id="phoneVerifyCode" maxlength="6" placeholder="请输入 6 位验证码">
+                            <button type="button" class="btn btn-primary" id="bindPhoneBtn">
+                                确认绑定
+                            </button>
+                        </div>
+                        <p class="hint" id="phoneBindHint">
+                            绑定后可用于后续找回密码、修改密码等账号安全操作。
+                        </p>
+                    </div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal">取消</button>
                     <button type="submit" class="btn btn-primary">保存修改</button>
@@ -368,6 +417,7 @@
     const username = [[${username}]];  // 双中括号会自动转义为字符串
     const iconUrl = [[${iconUrl}]];
     const nickname = [[${nickname}]];
+    const phoneNumber = [[${phoneNumber}]];
 </script>
 </body>
 </html>

@@ -13,8 +13,11 @@ CREATE TABLE IF NOT EXISTS `user` (
   `win_games`     INT          DEFAULT 0,
   `score`         INT          DEFAULT 0,
   `iconUrl`       VARCHAR(255) DEFAULT NULL,
+  `phone_number`  VARCHAR(20)  DEFAULT NULL UNIQUE,
+  `phone_bound_at` DATETIME    DEFAULT NULL,
   `role`          VARCHAR(16)  NOT NULL DEFAULT 'PLAYER',
   `vip_expire_at` DATETIME     DEFAULT NULL,
+  KEY `idx_phone_number` (`phone_number`),
   KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
