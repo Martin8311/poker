@@ -25,6 +25,14 @@ public class UserSchemaMigrationRunner implements ApplicationRunner {
                 "ALTER TABLE `user` ADD COLUMN `phone_number` VARCHAR(20) DEFAULT NULL UNIQUE");
         ensureColumn("phone_bound_at",
                 "ALTER TABLE `user` ADD COLUMN `phone_bound_at` DATETIME DEFAULT NULL");
+        ensureColumn("banned",
+                "ALTER TABLE `user` ADD COLUMN `banned` TINYINT(1) NOT NULL DEFAULT 0");
+        ensureColumn("ban_reason",
+                "ALTER TABLE `user` ADD COLUMN `ban_reason` VARCHAR(200) DEFAULT NULL");
+        ensureColumn("banned_at",
+                "ALTER TABLE `user` ADD COLUMN `banned_at` DATETIME DEFAULT NULL");
+        ensureColumn("ban_expire_at",
+                "ALTER TABLE `user` ADD COLUMN `ban_expire_at` DATETIME DEFAULT NULL");
     }
 
     private void ensureColumn(String columnName, String ddl) {

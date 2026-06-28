@@ -1,6 +1,7 @@
 package martin.game.controller;
 
 import martin.game.model.User;
+import martin.game.service.ContentModerationService;
 import martin.game.service.HumanVerificationService;
 import martin.game.service.PhoneVerificationService;
 import martin.game.service.UserService;
@@ -36,6 +37,9 @@ public class UserController {
 
     @Autowired
     private HumanVerificationService humanVerificationService;
+
+    @Autowired
+    private ContentModerationService contentModerationService;
 
     @Value("${app.phone-verification.debug-code:true}")
     private boolean phoneVerificationDebugCode;
@@ -80,6 +84,14 @@ public class UserController {
         Map<String, Object> result = new HashMap<>();
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         User user = userService.findByUsername(userDetails.getUsername());
+        ContentModerationService.ModerationResult nicknameModeration =
+                contentModerationService.moderateNickname(user.getUsername(), nickname);
+        if (!nicknameModeration.isPassed()) {
+            result.put("success", false);
+            result.put("error", nicknameModeration.getReason());
+            return result;
+        }
+        nickname = nicknameModeration.getSanitizedText();
 
         if(!user.getNickname().equals(nickname)){
             logger.info("用户:" + user.getUsername() + " 从 " + user.getNickname() + " 更名为 " + nickname);
@@ -161,6 +173,44 @@ public class UserController {
             result.put("success", true);
             result.put("message", "手机号绑定成功");
             result.put("phoneNumber", phoneNumber == null ? "" : phoneNumber.trim());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    @PostMapping("/user/password/send-code")
+    @ResponseBody
+    public Map<String, Object> sendPasswordChangeCode(Authentication authentication, String humanToken) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            humanVerificationService.consumePassedToken(authentication.getName(), humanToken);
+            PhoneVerificationService.SendCodeResult sendResult =
+                    phoneVerificationService.sendPasswordChangeCode(authentication.getName());
+            result.put("success", true);
+            result.put("message", "验证码已发送");
+            result.put("maskedPhoneNumber", sendResult.maskedPhoneNumber());
+            result.put("ttlMinutes", sendResult.ttlMinutes());
+            result.put("cooldownSeconds", sendResult.cooldownSeconds());
+            if (phoneVerificationDebugCode) {
+                result.put("debugCode", sendResult.code());
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    @PostMapping("/user/password/change")
+    @ResponseBody
+    public Map<String, Object> changePassword(Authentication authentication, String code, String newPassword) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            phoneVerificationService.changePassword(authentication.getName(), code, newPassword);
+            result.put("success", true);
+            result.put("message", "密码已修改，请下次使用新密码登录");
         } catch (IllegalArgumentException | IllegalStateException e) {
             result.put("success", false);
             result.put("error", e.getMessage());

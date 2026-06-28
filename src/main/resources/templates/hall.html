@@ -152,6 +152,51 @@
                     </div>
                 </div>
 
+                <div class="form-group phone-bind-section password-change-section">
+                    <label>账号安全：</label>
+                    <button type="button" class="btn btn-secondary phone-bind-toggle" id="showPasswordChangeBtn">
+                        修改密码
+                    </button>
+                    <div class="phone-bind-panel" id="passwordChangePanel" hidden>
+                        <div class="human-verify-box" id="passwordHumanVerifyBox">
+                            <div class="human-verify-head">
+                                <span id="passwordHumanVerifyPrompt">人机验证加载中...</span>
+                                <button type="button" class="human-verify-refresh" id="passwordRefreshHumanVerifyBtn">
+                                    换一个
+                                </button>
+                            </div>
+                            <div id="passwordHumanVerifyContent"></div>
+                            <div class="phone-bind-row human-verify-actions">
+                                <input type="text" id="passwordHumanVerifyAnswer" maxlength="8" placeholder="请输入答案">
+                                <button type="button" class="btn btn-secondary" id="passwordVerifyHumanBtn">
+                                    完成验证
+                                </button>
+                            </div>
+                            <p class="hint" id="passwordHumanVerifyHint">
+                                发送修改密码验证码前需要先完成人机验证。
+                            </p>
+                        </div>
+                        <div class="phone-bind-row">
+                            <input type="text" id="passwordVerifyCode" maxlength="6" placeholder="请输入 6 位验证码">
+                            <button type="button" class="btn btn-secondary" id="sendPasswordCodeBtn">
+                                发送验证码
+                            </button>
+                        </div>
+                        <div class="phone-bind-row">
+                            <input type="password" id="newPassword" maxlength="64" placeholder="请输入新密码（6-64 位）">
+                        </div>
+                        <div class="phone-bind-row">
+                            <input type="password" id="confirmNewPassword" maxlength="64" placeholder="请再次输入新密码">
+                            <button type="button" class="btn btn-primary" id="changePasswordBtn">
+                                确认修改
+                            </button>
+                        </div>
+                        <p class="hint" id="passwordChangeHint">
+                            验证码会发送到当前账号已绑定的手机号。
+                        </p>
+                    </div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary close-modal">取消</button>
                     <button type="submit" class="btn btn-primary">保存修改</button>

@@ -15,9 +15,14 @@ CREATE TABLE IF NOT EXISTS `user` (
   `iconUrl`       VARCHAR(255) DEFAULT NULL,
   `phone_number`  VARCHAR(20)  DEFAULT NULL UNIQUE,
   `phone_bound_at` DATETIME    DEFAULT NULL,
+  `banned`        TINYINT(1)   NOT NULL DEFAULT 0,
+  `ban_reason`    VARCHAR(200) DEFAULT NULL,
+  `banned_at`     DATETIME     DEFAULT NULL,
+  `ban_expire_at` DATETIME     DEFAULT NULL,
   `role`          VARCHAR(16)  NOT NULL DEFAULT 'PLAYER',
   `vip_expire_at` DATETIME     DEFAULT NULL,
   KEY `idx_phone_number` (`phone_number`),
+  KEY `idx_banned` (`banned`),
   KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -78,4 +83,19 @@ CREATE TABLE IF NOT EXISTS `recharge_order` (
   KEY `idx_user_time` (`username`, `create_time`),
   KEY `idx_plan`      (`plan_id`),
   KEY `idx_status_expired` (`status`, `expired_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `chat_moderation_log` (
+  `id`                BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `room_id`           VARCHAR(64)  NOT NULL,
+  `username`          VARCHAR(45)  NOT NULL,
+  `nickname`          VARCHAR(45)  DEFAULT NULL,
+  `original_content`  VARCHAR(500) NOT NULL,
+  `sanitized_content` VARCHAR(500) DEFAULT NULL,
+  `action`            VARCHAR(20)  NOT NULL,
+  `reason`            VARCHAR(200) DEFAULT NULL,
+  `create_time`       DATETIME     NOT NULL,
+  KEY `idx_chat_mod_user_time` (`username`, `create_time`),
+  KEY `idx_chat_mod_action_time` (`action`, `create_time`),
+  KEY `idx_chat_mod_room_time` (`room_id`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

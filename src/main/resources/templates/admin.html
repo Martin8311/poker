@@ -19,7 +19,7 @@
     <header class="admin-header">
         <div class="admin-header-left">
             <h1><i class="fas fa-shield-alt"></i> 管理后台</h1>
-            <span class="admin-subtitle">占位版（未来实现用户管理）</span>
+            <span class="admin-subtitle">用户概览与内容安全管理</span>
         </div>
         <div class="admin-header-right">
             <span>欢迎，<b th:text="${me.nickname}">Admin</b></span>
@@ -66,12 +66,165 @@
         </div>
     </section>
 
-    <!-- 用户列表（仅展示，编辑功能留到未来） -->
-    <section class="admin-section">
+    <!-- 敏感词管理 -->
+    <section class="admin-section" id="moderation">
+        <div class="admin-section-head">
+            <h2><i class="fas fa-filter"></i> 敏感词库管理</h2>
+            <span class="admin-section-hint">脱敏词会替换为 * 后发送；拒绝词会阻止消息发送</span>
+        </div>
+
+        <div class="admin-alert admin-alert-success" th:if="${moderationMessage}" th:text="${moderationMessage}"></div>
+        <div class="admin-alert admin-alert-danger" th:if="${moderationError}" th:text="${moderationError}"></div>
+
+        <div class="moderation-grid">
+            <div class="moderation-panel">
+                <div class="moderation-panel-head">
+                    <h3>脱敏词</h3>
+                    <span th:text="${#lists.size(maskWords)} + ' 个'">0 个</span>
+                </div>
+                <form class="moderation-form" method="post" action="/admin/moderation/words">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="type" value="MASK">
+                    <input type="text" name="word" maxlength="40" placeholder="输入需要脱敏的词" required>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </form>
+                <div class="word-list">
+                    <div class="word-chip" th:each="word : ${maskWords}">
+                        <span th:text="${word}">word</span>
+                        <form method="post" action="/admin/moderation/words/delete">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" name="type" value="MASK">
+                            <input type="hidden" name="word" th:value="${word}">
+                            <button type="submit" title="删除">&times;</button>
+                        </form>
+                    </div>
+                    <div class="admin-empty" th:if="${#lists.isEmpty(maskWords)}">暂无脱敏词</div>
+                </div>
+            </div>
+
+            <div class="moderation-panel">
+                <div class="moderation-panel-head">
+                    <h3>拒绝词</h3>
+                    <span th:text="${#lists.size(rejectWords)} + ' 个'">0 个</span>
+                </div>
+                <form class="moderation-form" method="post" action="/admin/moderation/words">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                    <input type="hidden" name="type" value="REJECT">
+                    <input type="text" name="word" maxlength="40" placeholder="输入需要拦截的词" required>
+                    <button type="submit" class="btn btn-danger">添加</button>
+                </form>
+                <div class="word-list">
+                    <div class="word-chip word-chip-danger" th:each="word : ${rejectWords}">
+                        <span th:text="${word}">word</span>
+                        <form method="post" action="/admin/moderation/words/delete">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" name="type" value="REJECT">
+                            <input type="hidden" name="word" th:value="${word}">
+                            <button type="submit" title="删除">&times;</button>
+                        </form>
+                    </div>
+                    <div class="admin-empty" th:if="${#lists.isEmpty(rejectWords)}">暂无拒绝词</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="moderation-audit">
+        <div class="admin-section-head">
+            <h2><i class="fas fa-user-slash"></i> 禁言管理</h2>
+            <span class="admin-section-hint">展示当前仍在生效的自动禁言，可手动解除</span>
+        </div>
+
+        <table class="admin-table" th:if="${!#lists.isEmpty(mutedUsers)}">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>昵称</th>
+                    <th>剩余时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="m : ${mutedUsers}">
+                    <td th:text="${m.username}">alice</td>
+                    <td th:text="${m.nickname}">Alice</td>
+                    <td th:text="${m.ttlSeconds} + ' 秒'">300 秒</td>
+                    <td>
+                        <form method="post" action="/admin/moderation/mutes/release" class="inline-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" name="username" th:value="${m.username}">
+                            <button type="submit" class="btn btn-secondary btn-small">解除禁言</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="admin-empty" th:if="${#lists.isEmpty(mutedUsers)}">暂无生效禁言</div>
+
+        <div class="admin-section-head audit-head">
+            <h2><i class="fas fa-clipboard-list"></i> 违规审计日志</h2>
+            <span class="admin-section-hint">记录脱敏、拦截、频控、重复消息和禁言命中</span>
+        </div>
+
+        <form class="audit-filter" method="get" action="/admin#moderation-audit">
+            <input type="text" name="logUsername" th:value="${logUsername}" placeholder="按用户名筛选">
+            <select name="logAction">
+                <option value="">全部动作</option>
+                <option th:each="action : ${moderationActions}"
+                        th:value="${action.name()}"
+                        th:selected="${action.name() == logAction}"
+                        th:text="${action.name()}">MASK</option>
+            </select>
+            <button type="submit" class="btn btn-primary">查询</button>
+            <a href="/admin#moderation-audit" class="btn btn-secondary">重置</a>
+        </form>
+
+        <table class="admin-table moderation-log-table" th:if="${!#lists.isEmpty(moderationLogs)}">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>房间</th>
+                    <th>用户</th>
+                    <th>动作</th>
+                    <th>原因</th>
+                    <th>原内容</th>
+                    <th>处理后</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="log : ${moderationLogs}">
+                    <td th:text="${#temporals.format(log.createTime, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</td>
+                    <td th:text="${log.roomId}">room1</td>
+                    <td>
+                        <div th:text="${log.username}">alice</div>
+                        <small th:text="${log.nickname}">Alice</small>
+                    </td>
+                    <td><span class="audit-action" th:text="${log.action.name()}">REJECT</span></td>
+                    <td th:text="${log.reason ?: '-'}">-</td>
+                    <td class="log-content" th:text="${log.originalContent}">content</td>
+                    <td class="log-content" th:text="${log.sanitizedContent ?: '-'}">content</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="admin-empty" th:if="${#lists.isEmpty(moderationLogs)}">暂无审计日志</div>
+    </section>
+
+    <!-- 用户列表 -->
+    <section class="admin-section" id="users">
         <div class="admin-section-head">
             <h2><i class="fas fa-list"></i> 用户管理</h2>
-            <span class="admin-section-hint">占位：仅展示用户列表，编辑 / 提权 / 封号功能未来实现</span>
+            <span class="admin-section-hint">可封禁违规账号，封禁后用户无法登录并会被踢出已登录会话</span>
         </div>
+
+        <div class="admin-alert admin-alert-success" th:if="${userMessage}" th:text="${userMessage}"></div>
+        <div class="admin-alert admin-alert-danger" th:if="${userError}" th:text="${userError}"></div>
+
+        <form class="user-search-form" method="get" action="/admin#users">
+            <input type="text" name="userKeyword" th:value="${userKeyword}" placeholder="按用户名或昵称搜索">
+            <button type="submit" class="btn btn-primary">搜索</button>
+            <a href="/admin#users" class="btn btn-secondary">重置</a>
+            <span class="admin-section-hint" th:text="'当前显示 ' + ${#lists.size(users)} + ' 个用户'">当前显示 0 个用户</span>
+        </form>
 
         <table class="admin-table">
             <thead>
@@ -79,9 +232,13 @@
                     <th>用户名</th>
                     <th>昵称</th>
                     <th>角色</th>
+                    <th>状态</th>
+                    <th>封禁原因</th>
+                    <th>封禁到期</th>
                     <th>积分</th>
                     <th>总场数</th>
                     <th>胜场</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -100,9 +257,39 @@
                             <span th:case="'ADMIN'"  class="role-chip role-admin">ADMIN</span>
                         </span>
                     </td>
+                    <td>
+                        <span th:if="${u.banned == true}" class="status-chip status-banned">已封禁</span>
+                        <span th:if="${u.banned != true}" class="status-chip status-normal">正常</span>
+                    </td>
+                    <td class="ban-reason" th:text="${u.banReason ?: '-'}">-</td>
+                    <td th:text="${u.banned == true ? (u.banExpireAt == null ? '永久' : #temporals.format(u.banExpireAt, 'yyyy-MM-dd HH:mm')) : '-'}">-</td>
                     <td th:text="${u.score}">0</td>
                     <td th:text="${u.totalGames}">0</td>
                     <td th:text="${u.winGames}">0</td>
+                    <td class="user-actions">
+                        <form th:if="${u.banned != true and u.username != me.username and u.getEffectiveRole().name() != 'ADMIN'}"
+                              method="post" action="/admin/users/ban" class="ban-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" name="username" th:value="${u.username}">
+                            <input type="hidden" name="userKeyword" th:value="${userKeyword}">
+                            <input type="text" name="reason" maxlength="200" placeholder="封禁原因">
+                            <input type="number" name="durationAmount" min="1" max="3650" placeholder="时长">
+                            <select name="durationUnit">
+                                <option value="PERMANENT">永久</option>
+                                <option value="HOURS">小时</option>
+                                <option value="DAYS">天</option>
+                            </select>
+                            <button type="submit" class="btn btn-danger btn-small">封禁</button>
+                        </form>
+                        <form th:if="${u.banned == true}" method="post" action="/admin/users/unban" class="inline-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                            <input type="hidden" name="username" th:value="${u.username}">
+                            <input type="hidden" name="userKeyword" th:value="${userKeyword}">
+                            <button type="submit" class="btn btn-secondary btn-small">解封</button>
+                        </form>
+                        <span th:if="${u.banned != true and (u.username == me.username or u.getEffectiveRole().name() == 'ADMIN')}"
+                              class="admin-action-hint">不可封禁</span>
+                    </td>
                 </tr>
             </tbody>
         </table>

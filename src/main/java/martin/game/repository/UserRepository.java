@@ -25,6 +25,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // 按昵称模糊搜索好友（忽略大小写）
     List<User> findByNicknameContainingIgnoreCase(String nickname);
 
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.nickname) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<User> searchByUsernameOrNickname(@Param("keyword") String keyword);
+
     boolean existsByUsername(String username);
     // boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);
@@ -49,6 +53,21 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     int updatePhoneByUsername(@Param("username") String username,
                               @Param("phoneNumber") String phoneNumber,
                               @Param("phoneBoundAt") LocalDateTime phoneBoundAt);
+
+    @Modifying
+    @Query("UPDATE User p SET p.password = :password WHERE p.username = :username")
+    int updatePasswordByUsername(@Param("username") String username, @Param("password") String password);
+
+    @Modifying
+    @Query("UPDATE User p SET p.banned = true, p.banReason = :reason, p.bannedAt = :bannedAt, p.banExpireAt = :banExpireAt WHERE p.username = :username")
+    int banByUsername(@Param("username") String username,
+                      @Param("reason") String reason,
+                      @Param("bannedAt") LocalDateTime bannedAt,
+                      @Param("banExpireAt") LocalDateTime banExpireAt);
+
+    @Modifying
+    @Query("UPDATE User p SET p.banned = false, p.banReason = null, p.bannedAt = null, p.banExpireAt = null WHERE p.username = :username")
+    int unbanByUsername(@Param("username") String username);
 
     // ----- 角色权限 -----
 

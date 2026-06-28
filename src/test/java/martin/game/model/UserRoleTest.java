@@ -41,4 +41,26 @@ class UserRoleTest {
         assertThat(user.getEffectiveRole(LocalDateTime.of(2030, 1, 1, 0, 0)))
                 .isEqualTo(Role.ADMIN);
     }
+
+    @Test
+    @DisplayName("封禁账号不可登录")
+    void bannedUserIsLockedAndDisabled() {
+        User user = new User();
+        user.setBanned(true);
+
+        assertThat(user.isAccountNonLocked()).isFalse();
+        assertThat(user.isEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("临时封禁过期后账号可用")
+    void expiredBanIsNotActive() {
+        User user = new User();
+        user.setBanned(true);
+        user.setBanExpireAt(LocalDateTime.now().minusMinutes(1));
+
+        assertThat(user.isBanActive()).isFalse();
+        assertThat(user.isAccountNonLocked()).isTrue();
+        assertThat(user.isEnabled()).isTrue();
+    }
 }

@@ -15,11 +15,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
+
+    private static final DateTimeFormatter BAN_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final UserRepository userRepository;
     private final LeaderboardService leaderboardService;
@@ -28,6 +31,7 @@ public class UserService implements UserDetailsService {
     // private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         System.out.println(username);
         // 1. 根据用户名查询数据库中的用户实体
@@ -35,6 +39,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("用户不存在：" + username));
 
         // 2. 返回自定义的 LoginUser（包含用户 ID）
+        clearExpiredBanIfNeeded(user, LocalDateTime.now());
         return new LoginUser(user);
     }
 
@@ -96,10 +101,146 @@ public class UserService implements UserDetailsService {
         return affectedRows == 1;
     }
 
+    @Transactional
+    public boolean updatePassword(String username, String rawPassword) {
+        String password = rawPassword == null ? "" : rawPassword.trim();
+        if (password.length() < 6 || password.length() > 64) {
+            throw new IllegalArgumentException("密码长度需要在 6 到 64 位之间");
+        }
+        int affectedRows = userRepository.updatePasswordByUsername(username, passwordEncoder.encode(password));
+        return affectedRows == 1;
+    }
+
+    @Transactional
+    public boolean banUser(String operatorUsername, String username, String reason) {
+        String operator = normalizeUsername(operatorUsername, "管理员用户名不能为空");
+        String target = normalizeUsername(username, "用户名不能为空");
+        if (operator.equals(target)) {
+            throw new IllegalArgumentException("不能封禁自己");
+        }
+
+        User targetUser = findByUsername(target);
+        if (targetUser.getEffectiveRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("不能封禁管理员账号");
+        }
+
+        int affectedRows = userRepository.banByUsername(target, normalizeBanReason(reason), LocalDateTime.now(), null);
+        return affectedRows == 1;
+    }
+
+    @Transactional
+    public boolean banUser(String operatorUsername, String username, String reason,
+                           Integer durationAmount, String durationUnit) {
+        String operator = normalizeUsername(operatorUsername, "管理员用户名不能为空");
+        String target = normalizeUsername(username, "用户名不能为空");
+        if (operator.equals(target)) {
+            throw new IllegalArgumentException("不能封禁自己");
+        }
+
+        User targetUser = findByUsername(target);
+        if (targetUser.getEffectiveRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("不能封禁管理员账号");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime banExpireAt = calculateBanExpireAt(durationAmount, durationUnit, now);
+        int affectedRows = userRepository.banByUsername(target, normalizeBanReason(reason), now, banExpireAt);
+        return affectedRows == 1;
+    }
+
+    @Transactional
+    public boolean unbanUser(String username) {
+        String target = normalizeUsername(username, "用户名不能为空");
+        findByUsername(target);
+        int affectedRows = userRepository.unbanByUsername(target);
+        return affectedRows == 1;
+    }
+
+    public boolean isBanned(String username) {
+        User user = findByUsername(username);
+        return !clearExpiredBanIfNeeded(user, LocalDateTime.now()) && user.isBanActive();
+    }
+
+    public String getActiveBanMessage(String username) {
+        User user = findByUsername(username);
+        if (clearExpiredBanIfNeeded(user, LocalDateTime.now()) || !user.isBanActive()) {
+            return null;
+        }
+        String reason = user.getBanReason() == null || user.getBanReason().isBlank()
+                ? "管理员封禁"
+                : user.getBanReason();
+        String duration = user.getBanExpireAt() == null
+                ? "永久"
+                : "至 " + user.getBanExpireAt().format(BAN_TIME_FORMATTER);
+        return "账号已被封禁。原因：" + reason + "。封禁时长：" + duration;
+    }
+
+    public List<User> findAdminUsers(String keyword) {
+        String normalized = keyword == null ? "" : keyword.trim();
+        if (normalized.isBlank()) {
+            List<User> allUsers = userRepository.findByRole(Role.PLAYER);
+            allUsers.addAll(userRepository.findByRole(Role.VIP));
+            allUsers.addAll(userRepository.findByRole(Role.SVIP));
+            allUsers.addAll(userRepository.findByRole(Role.ADMIN));
+            return allUsers;
+        }
+        return userRepository.searchByUsernameOrNickname(normalized);
+    }
+
+    private String normalizeUsername(String username, String message) {
+        String normalized = username == null ? "" : username.trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return normalized;
+    }
+
+    private String normalizeBanReason(String reason) {
+        String normalized = reason == null ? "" : reason.trim();
+        if (normalized.isBlank()) {
+            normalized = "管理员封禁";
+        }
+        return normalized.length() > 200 ? normalized.substring(0, 200) : normalized;
+    }
+
+    private LocalDateTime calculateBanExpireAt(Integer amount, String unit, LocalDateTime now) {
+        String normalizedUnit = unit == null ? "PERMANENT" : unit.trim().toUpperCase();
+        if (normalizedUnit.isBlank() || "PERMANENT".equals(normalizedUnit)) {
+            return null;
+        }
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("封禁时长必须大于 0");
+        }
+        return switch (normalizedUnit) {
+            case "HOURS" -> now.plusHours(amount);
+            case "DAYS" -> now.plusDays(amount);
+            default -> throw new IllegalArgumentException("不支持的封禁时长单位");
+        };
+    }
+
+    private boolean clearExpiredBanIfNeeded(User user, LocalDateTime now) {
+        if (Boolean.TRUE.equals(user.getBanned())
+                && user.getBanExpireAt() != null
+                && !user.getBanExpireAt().isAfter(now)) {
+            userRepository.unbanByUsername(user.getUsername());
+            user.setBanned(false);
+            user.setBanReason(null);
+            user.setBannedAt(null);
+            user.setBanExpireAt(null);
+            return true;
+        }
+        return false;
+    }
+
     public boolean isPhoneBoundToOtherUser(String username, String phoneNumber) {
         return userRepository.findByPhoneNumber(phoneNumber)
                 .map(user -> !user.getUsername().equals(username))
                 .orElse(false);
+    }
+
+    public User findByPhoneNumber(String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new IllegalArgumentException("该手机号未绑定账号"));
     }
 
     // ============ 角色权限管理 ============

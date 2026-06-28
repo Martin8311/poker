@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
@@ -20,11 +21,17 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableMethodSecurity
 public class SecurityConfig {
     private final UserService userService;
+    private final BannedUserFilter bannedUserFilter;
+    private final LoginFailureHandler loginFailureHandler;
     private static final Logger logger = LogManager.getLogger(SecurityConfig.class);
 
 
-    public SecurityConfig(UserService userService) {
+    public SecurityConfig(UserService userService,
+                          BannedUserFilter bannedUserFilter,
+                          LoginFailureHandler loginFailureHandler) {
         this.userService = userService;
+        this.bannedUserFilter = bannedUserFilter;
+        this.loginFailureHandler = loginFailureHandler;
     }
 
     @Bean
@@ -47,7 +54,7 @@ public class SecurityConfig {
                 .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                 // 放行 actuator 监控端点供 Prometheus 抓取；生产环境应改为仅内网/独立端口可访问
                 // 静态资源全量 permitAll，避免 <img> / WebSocket 握手 401
-                .requestMatchers("/", "/login", "/register",
+                .requestMatchers("/", "/login", "/register", "/forgot-password", "/forgot-password/**",
                                  "/css/**", "/js/**", "/icon/**", "/avatar/**", "/poker/**", "/sound/**",
                                  "/druid/**", "/actuator/**", "/error").permitAll()
                 // 管理后台：仅 ADMIN 可访问
@@ -59,6 +66,7 @@ public class SecurityConfig {
         .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/hall", true)  // 登录成功后跳转的页面
+                .failureHandler(loginFailureHandler)
                 .permitAll()   // 允许匿名访问登录相关接口（如提交登录表单的接口）
         )
         .logout(logout -> logout
@@ -67,7 +75,8 @@ public class SecurityConfig {
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                 .logoutSuccessUrl("/login?logout")
                 .permitAll()
-        );
+        )
+        .addFilterAfter(bannedUserFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build(); //使所有配置生效
     }

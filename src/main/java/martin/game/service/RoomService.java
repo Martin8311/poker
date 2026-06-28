@@ -10,6 +10,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -63,9 +64,9 @@ public class RoomService {
 
         Room room = new Room(roomId, creator);
         room.setInfo(roomDesc);
-        if (!roomPassword.equals("null")) {
-            roomPassword = SHA256Utils.sha256Encrypt(roomPassword);
-            room.setRoomPassword(roomPassword);
+        String password = Optional.ofNullable(roomPassword).orElse("").trim();
+        if (!password.isEmpty() && !"null".equalsIgnoreCase(password)) {
+            room.setRoomPassword(SHA256Utils.sha256Encrypt(password));
             room.setPublicRoom(false);
             logger.info(creator.getUsername() + "创建了密码房间" + roomId);
         }

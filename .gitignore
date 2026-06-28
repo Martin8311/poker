@@ -36,6 +36,9 @@ build/
 logs/
 *.log
 
+### Runtime data ###
+data/
+
 ### Local env / secrets ###
 .env
 *-local.properties

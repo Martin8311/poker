@@ -75,7 +75,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     .setUserDestinationBroadcast("/topic/poker.user-dest");
         } else {
             // 默认：内存版 SimpleBroker（单机，开发无需外部 MQ）
-            config.enableSimpleBroker("/topic");
+            config.enableSimpleBroker("/topic", "/queue");
         }
     }
 }

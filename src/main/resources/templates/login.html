@@ -8,15 +8,13 @@
 <body>
 
 <div class="auth-container">
-    <h1>poker对战平台</h1>
+    <h1>poker 对战平台</h1>
     <h2>用户登录</h2>
 
-    <!-- 错误消息 -->
     <div th:if="${error}" class="error-message">
         <p th:text="${error}"></p>
     </div>
 
-    <!-- 登出消息 -->
     <div th:if="${message}" class="success-message">
         <p th:text="${message}"></p>
     </div>
@@ -38,7 +36,7 @@
     </form>
 
     <p>还没有账号？<a th:href="@{/register}">立即注册</a></p>
-
+    <p><a th:href="@{/forgot-password}">忘记密码？通过手机号找回</a></p>
 </div>
 </body>
 </html>

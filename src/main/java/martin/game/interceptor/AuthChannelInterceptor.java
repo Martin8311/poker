@@ -1,6 +1,7 @@
 package martin.game.interceptor;
 
 import martin.game.service.RoomService;
+import martin.game.service.UserService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.messaging.Message;
@@ -29,10 +30,12 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
     private static final String ROOM_TOPIC_PREFIX = "/topic/rooms.";
 
     private final RoomService roomService;
+    private final UserService userService;
     private static final Logger logger = LogManager.getLogger(AuthChannelInterceptor.class);
 
-    public AuthChannelInterceptor(RoomService roomService) {
+    public AuthChannelInterceptor(RoomService roomService, UserService userService) {
         this.roomService = roomService;
+        this.userService = userService;
     }
 
     @Override
@@ -64,6 +67,10 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
         if (accessor.getUser() == null) {
             logger.warn("拒绝未认证的 STOMP {} 消息", accessor.getCommand());
             throw new MessageDeliveryException("未认证，拒绝该消息");
+        }
+        if (userService.isBanned(accessor.getUser().getName())) {
+            logger.warn("拒绝已封禁用户 {} 的 STOMP {} 消息", accessor.getUser().getName(), accessor.getCommand());
+            throw new MessageDeliveryException("账号已被封禁");
         }
     }
 

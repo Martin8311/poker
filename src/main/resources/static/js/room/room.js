@@ -199,6 +199,17 @@ async function initWebSocket(){
                 if (window.FriendsUI) FriendsUI.onDm(JSON.parse(message.body));
             });
 
+            // 局内聊天合规提醒，只推送给发送者本人
+            stompClient.subscribe('/user/queue/chat-warning', function(message) {
+                const data = JSON.parse(message.body);
+                const text = data.message || '消息未发送，请修改后重试';
+                if (typeof showHandCardTip === 'function') {
+                    showHandCardTip(text);
+                } else {
+                    alert(text);
+                }
+            });
+
             // 2. 获取当前用户的信息
             await stompClient.send("/app/rooms/" + roomId + "/getInfo", {}, JSON.stringify({
                 type: 'GET_INFO',

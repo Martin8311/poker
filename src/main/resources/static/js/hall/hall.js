@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     initPhoneBinding();
+    initPasswordChange();
 
 
 });
@@ -402,6 +403,251 @@ function isValidPhone(phone) {
     return /^1[3-9]\d{9}$/.test(phone);
 }
 
+function initPasswordChange() {
+    const panel = document.getElementById('passwordChangePanel');
+    const showBtn = document.getElementById('showPasswordChangeBtn');
+    const sendBtn = document.getElementById('sendPasswordCodeBtn');
+    const changeBtn = document.getElementById('changePasswordBtn');
+    const codeInput = document.getElementById('passwordVerifyCode');
+    const passwordInput = document.getElementById('newPassword');
+    const confirmInput = document.getElementById('confirmNewPassword');
+    const hint = document.getElementById('passwordChangeHint');
+    const humanPrompt = document.getElementById('passwordHumanVerifyPrompt');
+    const humanContent = document.getElementById('passwordHumanVerifyContent');
+    const humanAnswer = document.getElementById('passwordHumanVerifyAnswer');
+    const humanHint = document.getElementById('passwordHumanVerifyHint');
+    const verifyHumanBtn = document.getElementById('passwordVerifyHumanBtn');
+    const refreshHumanBtn = document.getElementById('passwordRefreshHumanVerifyBtn');
+    let humanChallenge = null;
+    let humanToken = '';
+
+    if (!panel || !showBtn || !sendBtn || !changeBtn) {
+        return;
+    }
+
+    showBtn.addEventListener('click', function () {
+        const opening = panel.hidden;
+        panel.hidden = !opening;
+        showBtn.textContent = opening ? '收起修改密码' : '修改密码';
+        if (opening && !humanChallenge && !humanToken) {
+            loadHumanChallenge();
+        }
+    });
+
+    if (verifyHumanBtn) {
+        verifyHumanBtn.addEventListener('click', verifyHumanChallenge);
+    }
+    if (refreshHumanBtn) {
+        refreshHumanBtn.addEventListener('click', loadHumanChallenge);
+    }
+
+    sendBtn.addEventListener('click', async function () {
+        if (!humanToken) {
+            const verified = await verifyHumanChallenge();
+            if (!verified) {
+                return;
+            }
+        }
+
+        sendBtn.disabled = true;
+        try {
+            const data = await postForm('/user/password/send-code', {
+                humanToken: humanToken
+            });
+            if (!data.success) {
+                showToast(data.error || '验证码发送失败');
+                humanToken = '';
+                loadHumanChallenge();
+                sendBtn.disabled = false;
+                return;
+            }
+            humanToken = '';
+            const debugText = data.debugCode ? ` 开发验证码：${data.debugCode}` : '';
+            hint.textContent = `验证码已发送至 ${data.maskedPhoneNumber || '绑定手机号'}，${data.ttlMinutes || 5} 分钟内有效。${debugText}`;
+            if (humanHint) {
+                humanHint.textContent = '人机验证已使用，下次发送需要重新验证。';
+            }
+            startPhoneCodeCountdown(sendBtn, Number(data.cooldownSeconds || 60), '发送验证码');
+        } catch (error) {
+            console.error('发送修改密码验证码失败:', error);
+            showToast('验证码发送失败，请稍后重试');
+            humanToken = '';
+            loadHumanChallenge();
+            sendBtn.disabled = false;
+        }
+    });
+
+    changeBtn.addEventListener('click', async function () {
+        const code = codeInput.value.trim();
+        const newPassword = passwordInput.value.trim();
+        const confirmPassword = confirmInput.value.trim();
+        if (!/^\d{6}$/.test(code)) {
+            showToast('请输入 6 位数字验证码');
+            codeInput.focus();
+            return;
+        }
+        if (newPassword.length < 6 || newPassword.length > 64) {
+            showToast('密码长度需要在 6 到 64 位之间');
+            passwordInput.focus();
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            showToast('两次输入的新密码不一致');
+            confirmInput.focus();
+            return;
+        }
+
+        changeBtn.disabled = true;
+        try {
+            const data = await postForm('/user/password/change', {
+                code: code,
+                newPassword: newPassword
+            });
+            if (!data.success) {
+                showToast(data.error || '密码修改失败');
+                return;
+            }
+            codeInput.value = '';
+            passwordInput.value = '';
+            confirmInput.value = '';
+            hint.textContent = '密码修改成功，请下次使用新密码登录。';
+            panel.hidden = true;
+            showBtn.textContent = '修改密码';
+            showToast(data.message || '密码修改成功');
+        } catch (error) {
+            console.error('修改密码失败:', error);
+            showToast('密码修改失败，请稍后重试');
+        } finally {
+            changeBtn.disabled = false;
+        }
+    });
+
+    async function loadHumanChallenge() {
+        if (!humanPrompt || !humanContent || !humanAnswer) {
+            return;
+        }
+        humanToken = '';
+        humanChallenge = null;
+        humanPrompt.textContent = '人机验证加载中...';
+        humanContent.innerHTML = '';
+        humanAnswer.value = '';
+        humanAnswer.disabled = false;
+        humanAnswer.readOnly = false;
+        if (verifyHumanBtn) {
+            verifyHumanBtn.disabled = false;
+            verifyHumanBtn.textContent = '完成验证';
+        }
+        if (humanHint) {
+            humanHint.textContent = '发送修改密码验证码前需要先完成人机验证。';
+        }
+
+        try {
+            const data = await postForm('/user/human-verification/challenge', {});
+            if (!data.success || !data.challenge) {
+                throw new Error(data.error || '人机验证加载失败');
+            }
+            humanChallenge = data.challenge;
+            renderHumanChallenge(humanChallenge);
+        } catch (error) {
+            console.error('加载修改密码人机验证失败:', error);
+            humanPrompt.textContent = '人机验证加载失败';
+            if (humanHint) {
+                humanHint.textContent = '请点击“换一个”重试。';
+            }
+        }
+    }
+
+    function renderHumanChallenge(challenge) {
+        humanPrompt.textContent = challenge.prompt || '请完成人机验证';
+        humanContent.innerHTML = '';
+        humanAnswer.value = '';
+
+        if (challenge.type === 'SLIDER') {
+            const track = document.createElement('div');
+            track.className = 'human-slider-track';
+            track.style.width = `${challenge.trackWidth || 260}px`;
+
+            const target = document.createElement('span');
+            target.className = 'human-slider-target';
+            target.style.left = `${challenge.targetX || 0}px`;
+            track.appendChild(target);
+
+            const range = document.createElement('input');
+            range.type = 'range';
+            range.min = '0';
+            range.max = String(Math.max(1, (challenge.trackWidth || 260) - 36));
+            range.value = '0';
+            range.className = 'human-slider-range';
+            range.addEventListener('input', function () {
+                humanAnswer.value = range.value;
+            });
+
+            humanContent.appendChild(track);
+            humanContent.appendChild(range);
+            humanAnswer.value = '0';
+            humanAnswer.readOnly = true;
+            humanAnswer.placeholder = '拖动滑块完成验证';
+        } else {
+            const image = document.createElement('div');
+            image.className = 'human-image-code';
+            image.textContent = challenge.expression || '';
+            humanContent.appendChild(image);
+            humanAnswer.readOnly = false;
+            humanAnswer.placeholder = '请输入算式结果';
+            humanAnswer.focus();
+        }
+    }
+
+    async function verifyHumanChallenge() {
+        if (!humanChallenge) {
+            showToast('人机验证还未加载完成');
+            return false;
+        }
+        const answer = humanAnswer ? humanAnswer.value.trim() : '';
+        if (!answer) {
+            showToast('请先完成人机验证');
+            humanAnswer && humanAnswer.focus();
+            return false;
+        }
+
+        if (verifyHumanBtn) {
+            verifyHumanBtn.disabled = true;
+        }
+        try {
+            const data = await postForm('/user/human-verification/verify', {
+                challengeId: humanChallenge.challengeId,
+                answer: answer
+            });
+            if (!data.success) {
+                showToast(data.error || '人机验证失败');
+                loadHumanChallenge();
+                return false;
+            }
+            humanToken = data.humanToken || '';
+            if (humanHint) {
+                humanHint.textContent = '人机验证已通过，可以发送短信验证码。';
+            }
+            if (verifyHumanBtn) {
+                verifyHumanBtn.textContent = '已通过';
+                verifyHumanBtn.disabled = true;
+            }
+            if (humanAnswer) {
+                humanAnswer.disabled = true;
+            }
+            return true;
+        } catch (error) {
+            console.error('修改密码人机验证失败:', error);
+            showToast('人机验证失败，请稍后重试');
+            loadHumanChallenge();
+            return false;
+        } finally {
+            if (verifyHumanBtn && !humanToken) {
+                verifyHumanBtn.disabled = false;
+            }
+        }
+    }
+}
+
 async function postForm(url, values) {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => formData.append(key, value));
@@ -415,22 +661,21 @@ async function postForm(url, values) {
     return response.json();
 }
 
-function startPhoneCodeCountdown(button, seconds) {
+function startPhoneCodeCountdown(button, seconds, originalText) {
     let left = Math.max(1, seconds || 60);
-    const originalText = '发送验证码';
-    button.textContent = `${left}s 后重试`;
+    const text = originalText || "发送验证码";
+    button.textContent = left + "s 后重试";
     const timer = setInterval(() => {
         left -= 1;
         if (left <= 0) {
             clearInterval(timer);
             button.disabled = false;
-            button.textContent = originalText;
+            button.textContent = text;
         } else {
-            button.textContent = `${left}s 后重试`;
+            button.textContent = left + "s 后重试";
         }
     }, 1000);
 }
-
 document.addEventListener('DOMContentLoaded', function() {
     // 1. 获取DOM元素
     const createBtn = document.getElementById('createRoomBtn');

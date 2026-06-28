@@ -1,6 +1,8 @@
 package martin.game.controller;
 
 import martin.game.model.*;
+import martin.game.service.ChatModerationAuditService;
+import martin.game.service.ContentModerationService;
 import martin.game.service.GameService;
 import martin.game.service.RoomService;
 import martin.game.service.UserService;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -38,6 +41,15 @@ public class GameWebSocketController {
     @Autowired
     private GameService gameService;
 
+    @Autowired
+    private ContentModerationService contentModerationService;
+
+    @Autowired
+    private ChatModerationAuditService chatModerationAuditService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     private static final Logger logger = LogManager.getLogger(GameWebSocketController.class);
 
     /**
@@ -57,19 +69,29 @@ public class GameWebSocketController {
      * 处理房间内的聊天消息
      */
     @MessageMapping("/rooms/{roomId}/message")
-    @SendTo("/topic/rooms.{roomId}")
-    public GameMessage handleRoomMessage(
+    public void handleRoomMessage(
             @DestinationVariable String roomId,
             GameMessage message,
             Authentication authentication) {
 
         String username = authentication.getName();
         User user = userService.findByUsername(username);
+        ContentModerationService.ModerationResult moderation =
+                contentModerationService.moderateRoomChat(roomId, username, message.getContent());
+        chatModerationAuditService.record(roomId, username, user.getNickname(), message.getContent(), moderation);
+        if (!moderation.isPassed()) {
+            messagingTemplate.convertAndSendToUser(username, "/queue/chat-warning",
+                    Map.of("message", moderation.getReason()));
+            logger.warn("局内聊天被拦截: user={}, roomId={}, reason={}, content={}",
+                    username, roomId, moderation.getReason(), message.getContent());
+            return;
+        }
 
         message.setSenderNickname(user.getNickname());
+        message.setContent(moderation.getSanitizedText());
         message.setTimestamp(System.currentTimeMillis());
         logger.info("用户" + user.getUsername() + "发送信息:" + message.getContent());
-        return message;
+        messagingTemplate.convertAndSend("/topic/rooms." + roomId, message);
     }
 
     /**

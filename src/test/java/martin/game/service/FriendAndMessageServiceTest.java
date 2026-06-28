@@ -39,6 +39,8 @@ class FriendAndMessageServiceTest {
     private SimpMessagingTemplate messagingTemplate;
     @Mock
     private PresenceTracker presenceTracker;
+    @Mock
+    private ContentModerationService contentModerationService;
 
     @Nested
     @DisplayName("FriendService")
@@ -88,7 +90,7 @@ class FriendAndMessageServiceTest {
         @DisplayName("非好友不能发送私信")
         void nonFriendsCannotSendDm() {
             MessageService service = new MessageService(
-                    messageRepository, friendRequestRepository, messagingTemplate);
+                    messageRepository, friendRequestRepository, messagingTemplate, contentModerationService);
             when(friendRequestRepository.areFriends("alice", "bob")).thenReturn(false);
 
             assertThatThrownBy(() -> service.send("alice", "bob", "hello"))
@@ -100,8 +102,10 @@ class FriendAndMessageServiceTest {
         @DisplayName("好友私信会落库并实时推送给接收人")
         void friendsCanSendDm() {
             MessageService service = new MessageService(
-                    messageRepository, friendRequestRepository, messagingTemplate);
+                    messageRepository, friendRequestRepository, messagingTemplate, contentModerationService);
             when(friendRequestRepository.areFriends("alice", "bob")).thenReturn(true);
+            when(contentModerationService.moderatePrivateMessage("alice:bob", "alice", "hello"))
+                    .thenReturn(ContentModerationService.ModerationResult.pass("hello"));
             when(messageRepository.save(any(PrivateMessage.class))).thenAnswer(inv -> {
                 PrivateMessage message = inv.getArgument(0);
                 message.setId(100L);
@@ -119,6 +123,29 @@ class FriendAndMessageServiceTest {
             verify(messageRepository).save(saved.capture());
             assertThat(saved.getValue().getContent()).isEqualTo("hello");
             verify(messagingTemplate).convertAndSendToUser("bob", MessageService.DM_QUEUE, dto);
+        }
+
+        @Test
+        @DisplayName("私信命中脱敏词时保存脱敏后的内容")
+        void dmIsSavedWithSanitizedContent() {
+            MessageService service = new MessageService(
+                    messageRepository, friendRequestRepository, messagingTemplate, contentModerationService);
+            when(friendRequestRepository.areFriends("alice", "bob")).thenReturn(true);
+            when(contentModerationService.moderatePrivateMessage("alice:bob", "alice", "bad word"))
+                    .thenReturn(ContentModerationService.ModerationResult.mask("*** word"));
+            when(messageRepository.save(any(PrivateMessage.class))).thenAnswer(inv -> {
+                PrivateMessage message = inv.getArgument(0);
+                message.setId(101L);
+                message.prePersist();
+                return message;
+            });
+
+            MessageDto dto = service.send("alice", "bob", "bad word");
+
+            assertThat(dto.getContent()).isEqualTo("*** word");
+            ArgumentCaptor<PrivateMessage> saved = ArgumentCaptor.forClass(PrivateMessage.class);
+            verify(messageRepository).save(saved.capture());
+            assertThat(saved.getValue().getContent()).isEqualTo("*** word");
         }
     }
 

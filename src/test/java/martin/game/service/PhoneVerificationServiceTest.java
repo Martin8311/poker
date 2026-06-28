@@ -54,6 +54,7 @@ class PhoneVerificationServiceTest {
         PhoneVerificationService.SendCodeResult result = service.sendBindCode("alice", "13812345678");
 
         assertThat(result.phoneNumber()).isEqualTo("13812345678");
+        assertThat(result.maskedPhoneNumber()).isEqualTo("138****5678");
         assertThat(result.code()).matches("\\d{6}");
         verify(valueOps).set(eq("phone-bind:code:alice"),
                 eq("13812345678:" + result.code()),
@@ -88,7 +89,7 @@ class PhoneVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("手机号已绑定其他账号时拒绝发送验证码")
+    @DisplayName("手机号已绑定其他账号时拒绝发送绑定验证码")
     void phoneBoundToOtherUserRejectsSend() {
         User user = new User();
         user.setUsername("alice");
@@ -99,5 +100,80 @@ class PhoneVerificationServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("该手机号已绑定其他账号");
         verify(valueOps, never()).setIfAbsent(any(), any(), any(Duration.class));
+    }
+
+    @Test
+    @DisplayName("找回密码验证码要求用户名和绑定手机号匹配")
+    void passwordResetCodeRequiresBoundPhone() {
+        User user = new User();
+        user.setUsername("alice");
+        user.setPhoneNumber("13812345678");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(userService.findByUsername("alice")).thenReturn(user);
+        when(valueOps.setIfAbsent(eq("phone-reset:cooldown:alice"), eq("13812345678"), any(Duration.class)))
+                .thenReturn(true);
+
+        PhoneVerificationService.SendCodeResult result =
+                service.sendPasswordResetCode("alice", "13812345678");
+
+        assertThat(result.code()).matches("\\d{6}");
+        verify(valueOps).set(eq("phone-reset:code:alice"),
+                eq("13812345678:" + result.code()),
+                eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    @DisplayName("找回密码验证码正确时更新密码")
+    void resetPasswordWithCorrectCodeUpdatesPassword() {
+        User user = new User();
+        user.setUsername("alice");
+        user.setPhoneNumber("13812345678");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(userService.findByUsername("alice")).thenReturn(user);
+        when(valueOps.get("phone-reset:code:alice")).thenReturn("13812345678:123456");
+        when(userService.updatePassword("alice", "newpass1")).thenReturn(true);
+
+        service.resetPassword("alice", "13812345678", "123456", "newpass1");
+
+        verify(userService).updatePassword("alice", "newpass1");
+        verify(redisTemplate).delete("phone-reset:code:alice");
+        verify(redisTemplate).delete("phone-reset:cooldown:alice");
+    }
+
+    @Test
+    @DisplayName("登录后修改密码验证码发送到当前绑定手机号")
+    void sendPasswordChangeCodeUsesCurrentBoundPhone() {
+        User user = new User();
+        user.setUsername("alice");
+        user.setPhoneNumber("13812345678");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(userService.findByUsername("alice")).thenReturn(user);
+        when(valueOps.setIfAbsent(eq("phone-password:cooldown:alice"), eq("13812345678"), any(Duration.class)))
+                .thenReturn(true);
+
+        PhoneVerificationService.SendCodeResult result = service.sendPasswordChangeCode("alice");
+
+        assertThat(result.maskedPhoneNumber()).isEqualTo("138****5678");
+        verify(valueOps).set(eq("phone-password:code:alice"),
+                eq("13812345678:" + result.code()),
+                eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    @DisplayName("登录后修改密码验证码正确时更新密码")
+    void changePasswordWithCorrectCodeUpdatesPassword() {
+        User user = new User();
+        user.setUsername("alice");
+        user.setPhoneNumber("13812345678");
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(userService.findByUsername("alice")).thenReturn(user);
+        when(valueOps.get("phone-password:code:alice")).thenReturn("13812345678:123456");
+        when(userService.updatePassword("alice", "newpass1")).thenReturn(true);
+
+        service.changePassword("alice", "123456", "newpass1");
+
+        verify(userService).updatePassword("alice", "newpass1");
+        verify(redisTemplate).delete("phone-password:code:alice");
+        verify(redisTemplate).delete("phone-password:cooldown:alice");
     }
 }

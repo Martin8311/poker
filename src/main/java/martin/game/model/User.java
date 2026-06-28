@@ -61,6 +61,18 @@ public class User implements UserDetails {
     @Column(name="phone_bound_at")
     private LocalDateTime phoneBoundAt = null;
 
+    @Column(name="banned", nullable = false)
+    private Boolean banned = false;
+
+    @Column(name="ban_reason", length = 200)
+    private String banReason = null;
+
+    @Column(name="banned_at")
+    private LocalDateTime bannedAt = null;
+
+    @Column(name="ban_expire_at")
+    private LocalDateTime banExpireAt = null;
+
     @Enumerated(EnumType.STRING)
     @Column(name="role", nullable = false, length = 16)
     private Role role = Role.PLAYER;
@@ -77,6 +89,9 @@ public class User implements UserDetails {
         // 默认角色为普通玩家（与 DB DEFAULT 对应）
         if (this.role == null) {
             this.role = Role.PLAYER;
+        }
+        if (this.banned == null) {
+            this.banned = false;
         }
     }
 
@@ -104,6 +119,17 @@ public class User implements UserDetails {
         return this.role;
     }
 
+    public boolean isBanActive() {
+        return isBanActive(LocalDateTime.now());
+    }
+
+    public boolean isBanActive(LocalDateTime now) {
+        if (!Boolean.TRUE.equals(this.banned)) {
+            return false;
+        }
+        return this.banExpireAt == null || this.banExpireAt.isAfter(now);
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         //所有用户都只有普通权限
@@ -119,7 +145,7 @@ public class User implements UserDetails {
     @Override
     // 判断用户账户是否未被锁定。
     public boolean isAccountNonLocked() {
-        return true;
+        return !isBanActive();
     }
 
     @Override
@@ -131,7 +157,7 @@ public class User implements UserDetails {
     @Override
     // 判断用户账户是否启用
     public boolean isEnabled() {
-        return true;
+        return !isBanActive();
     }
 
     @Override
